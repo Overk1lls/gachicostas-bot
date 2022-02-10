@@ -55,6 +55,19 @@ export default class DiscordService {
                                     this.replyToChannel(REPLY_OR_ANSWERS[rollPhrase], msgChannel);
                                 }
                             }
+                        } else if (whoIsQuestion) {
+                            const rollAnswer = Math.floor(Math.random() * WHO_IS_ANSWERS.length);
+                            const rollUser = Math.floor(Math.random() * message.guild.memberCount);
+                            const users = await message.guild.members.fetch({ force: true });
+                            const user = users.at(rollUser).user;
+                            if (rollAnswer < WHO_IS_ANSWERS.length - 3) {
+                                this.replyToChannel(
+                                    WHO_IS_ANSWERS[rollAnswer] + ` ${user.username}#${user.discriminator}`,
+                                    msgChannel
+                                );
+                            } else {
+                                this.replyToChannel(WHO_IS_ANSWERS[rollAnswer], msgChannel);
+                            }
                         } else {
                             const answerId = Math.floor(Math.random() * REPLY_ANSWERS.length);
                             this.replyToChannel(REPLY_ANSWERS[answerId], msgChannel);
