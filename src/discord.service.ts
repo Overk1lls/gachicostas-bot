@@ -1,11 +1,12 @@
-import { Client, ClientOptions, DiscordAPIError, TextChannel } from "discord.js";
-import { WHO_IS } from "./lib/regexps";
+import { Client, ClientOptions, TextChannel } from "discord.js";
+import { TAG, WHO_IS } from "./lib/regexps";
 import { consoleLog, isMatching, isTestPassed, randomNum } from "./lib/utils";
 import {
     FILTHY_LANG,
     FILTHY_LANG_ANSWERS,
     REPLY_ANSWERS,
     REPLY_OR_ANSWERS,
+    RESPONSES,
     WHO_IS_ANSWERS
 } from "./lib/config";
 
@@ -51,7 +52,10 @@ export default class DiscordService {
                             const questions = msg.split('?')[0].split(/или/i);
                             const rollQuestions = randomNum(0, 2);
                             if (rollDice <= 75) {
-                                this.replyToChannel(questions[rollQuestions], msgChannel);
+                                const answer = questions[rollQuestions]
+                                    .split(' ')
+                                    .filter(chunk => !chunk.match(TAG)).join(' ');
+                                this.replyToChannel(answer, msgChannel);
                             } else {
                                 const rollPhrase = randomNum(0, REPLY_OR_ANSWERS.length);
                                 if (rollPhrase < 4) {
@@ -81,30 +85,38 @@ export default class DiscordService {
                             this.replyToChannel(REPLY_ANSWERS[rollAnswer], msgChannel);
                         }
                     } else {
-                        FILTHY_LANG.map(filth => {
-                            let noMentionRegex = new RegExp(`${this._username} ${filth}`, 'i');
-                            let mentionRegex = new RegExp(`(<@!\\d{8,}>) ${filth}`, 'i');
-                            if ((isMentioned && isTestPassed(mentionRegex, msg)) ||
-                                (!isMentioned && isTestPassed(noMentionRegex, msg))
-                            ) {
-                                let rollPhrase = randomNum(0, FILTHY_LANG_ANSWERS.length);
-                                return this.replyToChannel(FILTHY_LANG_ANSWERS[rollPhrase], msgChannel);
-                            }
-                        });
+                        const filthyRegex = new RegExp(FILTHY_LANG.join('|'), 'i');
+                        if (isTestPassed(filthyRegex, msg)) {
+                            FILTHY_LANG.map(filth => {
+                                let noMentionRegex = new RegExp(`${this._username} ${filth}`, 'i');
+                                let mentionRegex = new RegExp(`(<@!\\d{8,}>) ${filth}`, 'i');
+                                if ((isMentioned && isTestPassed(mentionRegex, msg)) ||
+                                    (!isMentioned && isTestPassed(noMentionRegex, msg))
+                                ) {
+                                    let rollPhrase = randomNum(
+                                        isMentioned ? 0 : 1,
+                                        FILTHY_LANG_ANSWERS.length
+                                    );
+                                    this.replyToChannel(FILTHY_LANG_ANSWERS[rollPhrase], msgChannel);
+                                }
+                            });
+                        } else {
+                            this.replyToChannel(RESPONSES.NO_QUESTION, msgChannel);
+                        }
                     }
                 }
             }
         });
     };
 
-    private replyToChannel = (message: string, channel: TextChannel) => {
+    private replyToChannel = async (message: string, channel: TextChannel) => {
         const permissions = channel.guild.me.permissionsIn(channel);
         if (!permissions.has('SEND_MESSAGES')) return;
 
         const channelId = channel.id;
         const responseChannel = this._client.channels.cache.get(channelId);
         try {
-            (<TextChannel>responseChannel).send(message);
+            await (<TextChannel>responseChannel).send(message);
         } catch (error) {
             console.error(error);
         }
