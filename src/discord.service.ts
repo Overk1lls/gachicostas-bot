@@ -1,9 +1,18 @@
 import { Client, ClientOptions, TextChannel } from "discord.js";
-import { REPLY_ANSWERS, REPLY_OR_ANSWERS, WHO_IS_ANSWERS } from "./lib/config";
-import { consoleLog } from "./lib/utils";
+import { WHO_IS } from "./lib/regexps";
+import { consoleLog, isMatching, isTestPassed, randomNum } from "./lib/utils";
+import {
+    FILTHY_LANG,
+    FILTHY_LANG_ANSWERS,
+    REPLY_ANSWERS,
+    REPLY_OR_ANSWERS,
+    WHO_IS_ANSWERS
+} from "./lib/config";
 
 export default class DiscordService {
     private _client: Client;
+    private _username: string;
+    private _usernameRegExp: RegExp;
 
     constructor(token: string, options: ClientOptions) {
         this._client = new Client(options);
@@ -14,7 +23,11 @@ export default class DiscordService {
     private start = async (token: string) => {
         await this._client
             .login(token)
-            .then(() => consoleLog(this._client.user.username + ' is ready'));
+            .then(() => {
+                this._username = this._client.user.username;
+                consoleLog(this._username + ' is ready');
+            });
+        this._usernameRegExp = new RegExp(this._username, 'i');
     };
 
     private messageHandler = () => {
@@ -22,44 +35,39 @@ export default class DiscordService {
             if (message.author.bot) return;
 
             const msgChannel = message.channel;
+
             if (msgChannel.type === 'GUILD_TEXT' && msgChannel instanceof TextChannel) {
-                const botName = this._client.user.username;
                 const msg = message.content;
+                const msgChunks = msg.split(' ');
+                const isMentioned = message.mentions.users.has(this._client.user.id);
 
-                // упоминание бота с тагом или без
-                if (message.mentions.users.has(this._client.user.id) || msg.match(/Гачикостас/i)) {
-                    // вопрос боту
+                if (isMentioned || isMatching(msg, this._usernameRegExp)) {
                     if (msg.split('').pop() === '?') {
-                        const msgChunk = msg.split(' ');
-                        const orQuestion = msgChunk.filter(word => word.match(/или/i))[0];
-                        const whoIsQuestion = msg.includes('кто на сервере') || msg.includes('КТО НА СЕРВЕРЕ');
+                        const orQuestion = msgChunks.filter(word => isMatching(word, /или/i));
+                        const isWhoIsQuestion = isTestPassed(WHO_IS, msg);
 
-                        // если в вопросе присутствует "или"
-                        // иначе другой ответ
-                        if (orQuestion && !whoIsQuestion) {
-                            const rollDice = Math.floor(Math.random() + 1 * 100);
-                            const chunks = msg.split('?')[0].split(/или/i);
-                            const rollChunk = Math.floor(Math.random() * 2);
-                            // 75% на выбор одного из вариантов вопроса или
-                            // 25% на рандомную фразу из списка
+                        if (orQuestion && !isWhoIsQuestion) {
+                            const rollDice = randomNum(1, 100);
+                            const questions = msg.split('?')[0].split(/или/i);
+                            const rollQuestions = randomNum(0, 2);
                             if (rollDice <= 75) {
-                                this.replyToChannel(chunks[rollChunk], msgChannel);
+                                this.replyToChannel(questions[rollQuestions], msgChannel);
                             } else {
-                                const rollPhrase = Math.floor(Math.random() * REPLY_OR_ANSWERS.length);
+                                const rollPhrase = randomNum(0, REPLY_OR_ANSWERS.length);
                                 if (rollPhrase < 4) {
                                     this.replyToChannel(
-                                        REPLY_OR_ANSWERS[rollPhrase] + chunks[rollChunk],
+                                        REPLY_OR_ANSWERS[rollPhrase] + questions[rollQuestions],
                                         msgChannel
                                     );
                                 } else {
                                     this.replyToChannel(REPLY_OR_ANSWERS[rollPhrase], msgChannel);
                                 }
                             }
-                        } else if (whoIsQuestion) {
-                            const rollAnswer = Math.floor(Math.random() * WHO_IS_ANSWERS.length);
-                            const rollUser = Math.floor(Math.random() * message.guild.memberCount);
+                        } else if (isWhoIsQuestion) {
+                            const rollAnswer = randomNum(0, WHO_IS_ANSWERS.length);
+                            const rollUsers = randomNum(0, message.guild.memberCount);
                             const users = await message.guild.members.fetch({ force: true });
-                            const user = users.at(rollUser).user;
+                            const user = users.at(rollUsers).user;
                             if (rollAnswer < WHO_IS_ANSWERS.length - 3) {
                                 this.replyToChannel(
                                     WHO_IS_ANSWERS[rollAnswer] + ` ${user.username}#${user.discriminator}`,
@@ -69,9 +77,20 @@ export default class DiscordService {
                                 this.replyToChannel(WHO_IS_ANSWERS[rollAnswer], msgChannel);
                             }
                         } else {
-                            const answerId = Math.floor(Math.random() * REPLY_ANSWERS.length);
-                            this.replyToChannel(REPLY_ANSWERS[answerId], msgChannel);
+                            const rollAnswer = randomNum(0, REPLY_ANSWERS.length);
+                            this.replyToChannel(REPLY_ANSWERS[rollAnswer], msgChannel);
                         }
+                    } else {
+                        FILTHY_LANG.map(filth => {
+                            let noMentionRegex = new RegExp(`${this._username} ${filth}`, 'i');
+                            let mentionRegex = new RegExp(`(<@!\\d{8,}>) ${filth}`, 'i');
+                            if ((isMentioned && isTestPassed(mentionRegex, msg)) ||
+                                (!isMentioned && isTestPassed(noMentionRegex, msg))
+                            ) {
+                                let rollPhrase = randomNum(0, FILTHY_LANG_ANSWERS.length);
+                                return this.replyToChannel(FILTHY_LANG_ANSWERS[rollPhrase], msgChannel);
+                            }
+                        });
                     }
                 }
             }

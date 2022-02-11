@@ -4,9 +4,7 @@ import DiscordService from "./discord.service";
 
 config();
 
-const {
-    DISCORD_BOT_TOKEN
-} = process.env;
+const { DISCORD_BOT_TOKEN } = process.env;
 
 const discordServiceOptions: ClientOptions = {
     intents: [
