@@ -1,4 +1,4 @@
-import { Client, ClientOptions, TextChannel } from "discord.js";
+import { Client, ClientOptions, DiscordAPIError, TextChannel } from "discord.js";
 import { WHO_IS } from "./lib/regexps";
 import { consoleLog, isMatching, isTestPassed, randomNum } from "./lib/utils";
 import {
@@ -43,7 +43,7 @@ export default class DiscordService {
 
                 if (isMentioned || isMatching(msg, this._usernameRegExp)) {
                     if (msg.split('').pop() === '?') {
-                        const orQuestion = msgChunks.filter(word => isMatching(word, /или/i));
+                        const orQuestion = msgChunks.filter(word => isMatching(word, /или/i))[0];
                         const isWhoIsQuestion = isTestPassed(WHO_IS, msg);
 
                         if (orQuestion && !isWhoIsQuestion) {
@@ -98,10 +98,16 @@ export default class DiscordService {
     };
 
     private replyToChannel = (message: string, channel: TextChannel) => {
+        const permissions = channel.guild.me.permissionsIn(channel);
+        if (!permissions.has('SEND_MESSAGES')) return;
+
         const channelId = channel.id;
         const responseChannel = this._client.channels.cache.get(channelId);
-
-        (<TextChannel>responseChannel).send(message);
+        try {
+            (<TextChannel>responseChannel).send(message);
+        } catch (error) {
+            console.error(error);
+        }
         consoleLog('ANSWERED: ' + message);
     };
 };
