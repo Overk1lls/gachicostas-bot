@@ -19,3 +19,12 @@ export const isIncluded = (text: string, substr: string) => {
 export const isMatching = (str: string, regexp: RegExp) => str.match(regexp);
 
 export const isTestPassed = (regexp: RegExp, str: string) => regexp.test(str);
+
+export const isDhQuestion = (regexps: RegExp[], text: string) => {
+    for (let regexp of regexps) {
+        if (regexp.test(text)) {
+            return true;
+        }
+    }
+    return false;
+};

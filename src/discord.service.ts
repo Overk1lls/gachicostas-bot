@@ -1,7 +1,10 @@
-import { Client, ClientOptions, TextChannel } from "discord.js";
-import { TAG, WHO_IS } from "./lib/regexps";
-import { consoleLog, isMatching, isTestPassed, randomNum } from "./lib/utils";
+import { Client, ClientOptions, MessageEmbed, MessageOptions, TextChannel } from "discord.js";
+import { COVENANTS, DH_QUESTIONS, LEGENDARIES, STAT_WEIGHTS, TAG, WHO_IS } from "./lib/regexps";
+import { consoleLog, isDhQuestion, isMatching, isTestPassed, randomNum } from "./lib/utils";
 import {
+    ATTACHMENTS,
+    BOG_TAG_ANSWERS,
+    ERRORS,
     FILTHY_LANG,
     FILTHY_LANG_ANSWERS,
     REPLY_ANSWERS,
@@ -42,7 +45,20 @@ export default class DiscordService {
                 const msgChunks = msg.split(' ');
                 const isMentioned = message.mentions.users.has(this._client.user.id);
 
-                if (isMentioned || isMatching(msg, this._usernameRegExp)) {
+                if (isDhQuestion(DH_QUESTIONS, msg)) {
+                    if (isTestPassed(STAT_WEIGHTS, msg)) {
+                        this.replyToChannel(RESPONSES.STAT_WEIGHTS, msgChannel);
+                    } else if (isTestPassed(LEGENDARIES, msg)) {
+                        this.replyToChannel(RESPONSES.LEGENDARIES, msgChannel);
+                    } else if (isTestPassed(COVENANTS, msg)) {
+                        let embed = new MessageEmbed()
+                            .setTitle('Какой ковенант лучше?')
+                            .addFields(RESPONSES.COVENANTS)
+                            .setImage(ATTACHMENTS.COVENANTS);
+
+                        this.replyToChannel(null, msgChannel, { embeds: [embed] });
+                    }
+                } else if (isMentioned || isMatching(msg, this._usernameRegExp)) {
                     if (msg.split('').pop() === '?') {
                         const orQuestion = msgChunks.filter(word => isMatching(word, /или/i))[0];
                         const isWhoIsQuestion = isTestPassed(WHO_IS, msg);
@@ -93,13 +109,13 @@ export default class DiscordService {
                                 if ((isMentioned && isTestPassed(mentionRegex, msg)) ||
                                     (!isMentioned && isTestPassed(noMentionRegex, msg))
                                 ) {
-                                    let rollPhrase = randomNum(
-                                        isMentioned ? 0 : 1,
-                                        FILTHY_LANG_ANSWERS.length
-                                    );
+                                    let rollPhrase = randomNum(0, FILTHY_LANG_ANSWERS.length);
                                     this.replyToChannel(FILTHY_LANG_ANSWERS[rollPhrase], msgChannel);
                                 }
                             });
+                        } else if (isMentioned) {
+                            const rollAnswer = randomNum(0, BOG_TAG_ANSWERS.length);
+                            this.replyToChannel(BOG_TAG_ANSWERS[rollAnswer], msgChannel);
                         } else {
                             this.replyToChannel(RESPONSES.NO_QUESTION, msgChannel);
                         }
@@ -109,14 +125,19 @@ export default class DiscordService {
         });
     };
 
-    private replyToChannel = async (message: string, channel: TextChannel) => {
+    private replyToChannel = async (message: string, channel: TextChannel, options?: MessageOptions) => {
         const permissions = channel.guild.me.permissionsIn(channel);
-        if (!permissions.has('SEND_MESSAGES')) return;
+        if (!permissions.has('SEND_MESSAGES')) {
+            consoleLog(ERRORS.NO_PERMISSION);
+            return;
+        }
 
         const channelId = channel.id;
         const responseChannel = this._client.channels.cache.get(channelId);
         try {
-            await (<TextChannel>responseChannel).send(message);
+            await (<TextChannel>responseChannel).send(
+                options.embeds ? options : { content: message, options }
+            );
         } catch (error) {
             console.error(error);
         }
