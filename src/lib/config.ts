@@ -102,7 +102,8 @@ export const FILTHY_LANG_ANSWERS = [
     'все так'
 ];
 
-export const BOG_TAG_ANSWERS = [
+export const BOT_TAG_ANSWERS = [
+    '<:pepe_weird:907949306743517194>',
     'Не тагай меня пес!',
     'Я не видел бафов уже десять тысяч лет',
     'Тсс! Не мешай мне думать!',
@@ -113,7 +114,7 @@ export const BOG_TAG_ANSWERS = [
     'Тысячи лет я искал пати в ключ!',
     'Что бы вы все сгорели!!! [Шепотом] Простите.',
     'От тебя разит могилой, смертный.',
-    'Вы, демон хантеры, только трепаться умеете?'
+    'Вы, демон хантеры, только трепаться умеете?',
 ];
 
 export const RESPONSES = {
@@ -155,3 +156,5 @@ export const ATTACHMENTS = {
 export const ERRORS = {
     NO_PERMISSION: 'I don\'t have permissions to send a message to the channel'
 };
+
+export const DISCORD_TAG = '(<@!\\d{8,}>)';

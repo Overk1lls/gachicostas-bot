@@ -3,7 +3,8 @@ import { COVENANTS, DH_QUESTIONS, LEGENDARIES, STAT_WEIGHTS, TAG, WHO_IS } from 
 import { consoleLog, isDhQuestion, isMatching, isTestPassed, randomNum } from "./lib/utils";
 import {
     ATTACHMENTS,
-    BOG_TAG_ANSWERS,
+    BOT_TAG_ANSWERS,
+    DISCORD_TAG,
     ERRORS,
     FILTHY_LANG,
     FILTHY_LANG_ANSWERS,
@@ -105,7 +106,7 @@ export default class DiscordService {
                         if (isTestPassed(filthyRegex, msg)) {
                             FILTHY_LANG.map(filth => {
                                 let noMentionRegex = new RegExp(`${this._username} ${filth}`, 'i');
-                                let mentionRegex = new RegExp(`(<@!\\d{8,}>) ${filth}`, 'i');
+                                let mentionRegex = new RegExp(`${DISCORD_TAG} ${filth}`, 'i');
                                 if ((isMentioned && isTestPassed(mentionRegex, msg)) ||
                                     (!isMentioned && isTestPassed(noMentionRegex, msg))
                                 ) {
@@ -114,8 +115,8 @@ export default class DiscordService {
                                 }
                             });
                         } else if (isMentioned) {
-                            const rollAnswer = randomNum(0, BOG_TAG_ANSWERS.length);
-                            this.replyToChannel(BOG_TAG_ANSWERS[rollAnswer], msgChannel);
+                            const rollAnswer = randomNum(0, BOT_TAG_ANSWERS.length);
+                            this.replyToChannel(BOT_TAG_ANSWERS[rollAnswer], msgChannel);
                         } else {
                             this.replyToChannel(RESPONSES.NO_QUESTION, msgChannel);
                         }
@@ -135,9 +136,7 @@ export default class DiscordService {
         const channelId = channel.id;
         const responseChannel = this._client.channels.cache.get(channelId);
         try {
-            await (<TextChannel>responseChannel).send(
-                options.embeds ? options : { content: message, options }
-            );
+            await (<TextChannel>responseChannel).send(options ? options : message);
         } catch (error) {
             console.error(error);
         }
