@@ -130,8 +130,8 @@ export default class DiscordService {
                             const guildUser = guildUsers.at(rollUsers).user;
                             this.replyToChannel(
                                 rollAnswer < 3 ?
-                                    `${WHO_IS_ANSWERS[rollAnswer]} ${guildUser.username}#${guildUser.discriminator}` :
-                                    WHO_IS_ANSWERS[rollAnswer],
+                                    WHO_IS_ANSWERS[rollAnswer] :
+                                    `${WHO_IS_ANSWERS[rollAnswer]} ${guildUser.username}#${guildUser.discriminator}`,
                                 msgChannel
                             );
                         }
