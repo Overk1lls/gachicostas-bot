@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node dist/index.js",
     "postinstall": "tsc",
-    "run": "npx tsc & node dist/index.js"
+    "dev": "npx tsc & node dist/index.js"
   },
   "keywords": [
     "discord-bot",
