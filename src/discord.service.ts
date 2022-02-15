@@ -10,7 +10,7 @@ import {
     COVENANTS,
     DH_QUESTIONS,
     LEGENDARIES,
-    OR_QUESTION,
+    OR_WORD,
     STAT_WEIGHTS,
     DISCORD_TAG_REGEXP,
     WHO_IS,
@@ -21,7 +21,8 @@ import {
     isOneRegexInText,
     isMatching,
     isRegexInText,
-    randomNum
+    randomNum,
+    getRandomElement
 } from './lib/utils';
 import {
     ATTACHMENTS,
@@ -64,7 +65,6 @@ export default class DiscordService {
             if (message.author.bot) return;
 
             const msgChannel = message.channel;
-
             if (msgChannel instanceof TextChannel || msgChannel instanceof ThreadChannel) {
                 const msg = message.content;
                 const msgChunks = msg.split(' ');
@@ -94,17 +94,17 @@ export default class DiscordService {
                 else if (isMentioned || isMatching(msg, this._usernameRegExp)) {
                     // если упомянули с вопросом
                     if (msg.split('').pop() === '?') {
-                        const orQuestion = msgChunks.filter(word => isMatching(word, OR_QUESTION))[0];
+                        const orWord = msgChunks.filter(word => isMatching(word, OR_WORD))[0];
                         const isWhoIsQuestion = isRegexInText(WHO_IS, msg);
 
                         // если "или" вопрос, рандомим 75% и 25%
-                        if (orQuestion && !isWhoIsQuestion) {
+                        if (orWord && !isWhoIsQuestion) {
                             const rollDice = randomNum(0, 100);
-                            const questions = msg.split('?')[0].split(OR_QUESTION);
-                            const rollQuestions = randomNum(0, 2);
+                            const questions = msg.split('?')[0].split(OR_WORD);
+                            const rollQuestion: string = getRandomElement(questions);
                             // если 75%, то отправляем одно из двух вопросов
                             if (rollDice < 75) {
-                                const answer = questions[rollQuestions]
+                                const answer = rollQuestion
                                     .split(' ')
                                     .filter(question => !question.match(DISCORD_TAG_REGEXP)).join(' ');
                                 this.replyToChannel(answer, msgChannel);
@@ -114,7 +114,7 @@ export default class DiscordService {
                                 const rollPhrase = randomNum(0, REPLY_OR_ANSWERS.length);
                                 if (rollPhrase < 4) {
                                     this.replyToChannel(
-                                        REPLY_OR_ANSWERS[rollPhrase] + questions[rollQuestions],
+                                        REPLY_OR_ANSWERS[rollPhrase] + rollQuestion,
                                         msgChannel
                                     );
                                 } else {
@@ -137,8 +137,8 @@ export default class DiscordService {
                         }
                         // если просто вопрос
                         else {
-                            const rollAnswer = randomNum(0, REPLY_ANSWERS.length);
-                            this.replyToChannel(REPLY_ANSWERS[rollAnswer], msgChannel);
+                            const rollAnswer: string = getRandomElement(REPLY_ANSWERS);
+                            this.replyToChannel(rollAnswer, msgChannel);
                         }
                     }
                     // если таг без знака вопроса
@@ -152,15 +152,15 @@ export default class DiscordService {
                                 if ((isMentioned && isRegexInText(mentionRegex, msg)) ||
                                     (!isMentioned && isRegexInText(noMentionRegex, msg))
                                 ) {
-                                    const rollPhrase = randomNum(0, FILTHY_LANG_ANSWERS.length);
-                                    this.replyToChannel(FILTHY_LANG_ANSWERS[rollPhrase], msgChannel);
+                                    const rollPhrase: string = getRandomElement(FILTHY_LANG_ANSWERS);
+                                    this.replyToChannel(rollPhrase, msgChannel);
                                 }
                             });
                         }
                         // если просто тагнули
                         else if (isMentioned) {
-                            const rollAnswer = randomNum(0, BOT_TAG_ANSWERS.length);
-                            this.replyToChannel(BOT_TAG_ANSWERS[rollAnswer], msgChannel);
+                            const rollAnswer: string = getRandomElement(BOT_TAG_ANSWERS);
+                            this.replyToChannel(rollAnswer, msgChannel);
                         }
                         // если таг, но ничего из выше перечисленного
                         else {
@@ -186,6 +186,10 @@ export default class DiscordService {
         } catch (error) {
             console.error(error);
         }
-        consoleLog('ANSWERED: ' + message);
+        consoleLog(`${this._username}: ${message}`);
     };
+
+    public get client(): Client {
+        return this._client;
+    }
 };

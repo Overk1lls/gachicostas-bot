@@ -1,11 +1,6 @@
 export const consoleLog = (text: string) => {
     const currDate = new Date();
-    console.log(
-        currDate.getHours() + ':' +
-        currDate.getMinutes() + ':' +
-        currDate.getSeconds() + ':' +
-        ` ${text}`
-    );
+    console.log(`${currDate.getHours()}:${currDate.getMinutes()} ${text}`);
 };
 
 export const randomNum = (min: number, max: number) => {
@@ -27,4 +22,8 @@ export const isOneRegexInText = (regexps: RegExp[], text: string) => {
         }
     }
     return false;
+};
+
+export const getRandomElement = (array: any[]) => {
+    return array[randomNum(0, array.length)];
 };
