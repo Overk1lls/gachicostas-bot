@@ -13,7 +13,8 @@ import {
     OR_QUESTION,
     STAT_WEIGHTS,
     DISCORD_TAG_REGEXP,
-    WHO_IS
+    WHO_IS,
+    NEW_PATCH
 } from './lib/regexps';
 import {
     consoleLog,
@@ -70,7 +71,7 @@ export default class DiscordService {
                 const isMentioned = message.mentions.users.has(this._client.user.id);
 
                 // если вопрос про дх
-                if (isOneRegexInText(DH_QUESTIONS, msg)) {
+                if (isOneRegexInText(DH_QUESTIONS, msg) && !isRegexInText(NEW_PATCH, msg)) {
                     // если вопрос про веса статов
                     if (isRegexInText(STAT_WEIGHTS, msg)) {
                         this.replyToChannel(RESPONSES.STAT_WEIGHTS, msgChannel);
