@@ -53,7 +53,7 @@ export const REPLY_OR_ANSWERS = [
     'сложно ответить',
     'спроси что-нибудь попроще',
     'не в теме',
-    'самому интересно'
+    'самому интересно',
 ];
 
 export const WHO_IS_QUESTION = [
@@ -61,6 +61,9 @@ export const WHO_IS_QUESTION = [
 ];
 
 export const WHO_IS_ANSWERS = [
+    'не в теме',
+    'чёрт его знает',
+    'спроси что-нибудь попроще',
     'потенциально это',
     'вернее всего это',
     'сложно ответить',
@@ -74,9 +77,6 @@ export const WHO_IS_ANSWERS = [
     'видно это',
     'вероятно это',
     'как мне кажется это',
-    'не в теме',
-    'чёрт его знает',
-    'спроси что-нибудь попроще'
 ];
 
 export const FILTHY_LANG = [
@@ -88,7 +88,7 @@ export const FILTHY_LANG = [
     'Сучка',
     'Еблан',
     'Долбоёб',
-    'Иди на хуй'
+    'Иди на хуй',
 ];
 
 export const FILTHY_LANG_ANSWERS = [
@@ -99,7 +99,7 @@ export const FILTHY_LANG_ANSWERS = [
     'ты про себя говоришь?',
     'Да ты знаешь кто я',
     'Та за шо',
-    'все так'
+    'все так',
 ];
 
 export const BOT_TAG_ANSWERS = [
@@ -141,20 +141,21 @@ export const RESPONSES = {
         {
             name: 'М+',
             value: 'Феи/Некролорды > Вентиры/Кирии'
-        }, 
+        },
         {
             name: 'ПВП',
             value: 'Некролорды > Феи > Вентиры/Кирии'
         }
-    ]
+    ],
 };
 
 export const ATTACHMENTS = {
-    COVENANTS: 'https://i.imgur.com/0AKnoCY.png'
+    COVENANTS: 'https://i.imgur.com/0AKnoCY.png',
 };
 
 export const ERRORS = {
-    NO_PERMISSION: 'I don\'t have permissions to send a message to the channel'
+    NO_PERMISSION: 'I don\'t have permissions to send a message to the channel',
 };
 
-export const DISCORD_TAG = '(<@!\\d{8,}>)';
+export const DISCORD_TAG_STR = '(<@!\\d{8,}>)';
+export const COVENANTS_ANSWER_TITLE = 'Какой ковенант лучше?';
