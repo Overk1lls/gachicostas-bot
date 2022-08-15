@@ -1,45 +1,31 @@
 module.exports = {
-    root: true,
     parser: '@typescript-eslint/parser',
-    plugins: [
-        '@typescript-eslint',
-    ],
+    parserOptions: {
+        project: 'tsconfig.json',
+        sourceType: 'module',
+    },
+    plugins: ['@typescript-eslint/eslint-plugin'],
     extends: [
-        'eslint:recommended',
         'plugin:@typescript-eslint/recommended',
-        'prettier'
+        'plugin:prettier/recommended',
     ],
+    root: true,
+    env: {
+        node: true,
+        jest: true,
+    },
+    ignorePatterns: ['.eslintrc.js'],
     rules: {
-        "arrow-spacing": ["warn", { "before": true, "after": true }],
-        "comma-style": "error",
-        "dot-location": ["error", "property"],
-        "handle-callback-err": "off",
-        "keyword-spacing": "error",
-        "max-nested-callbacks": ["error", { "max": 4 }],
-        "max-statements-per-line": ["error", { "max": 2 }],
-        "no-console": "off",
-        "no-empty-function": "error",
-        "no-floating-decimal": "error",
-        "no-inline-comments": "error",
-        "no-lonely-if": "error",
-        "no-multi-spaces": "error",
-        "no-multiple-empty-lines": ["error", { "max": 2, "maxEOF": 1, "maxBOF": 0 }],
-        "no-shadow": ["error", { "allow": ["err", "resolve", "reject"] }],
-        "no-trailing-spaces": ["error"],
-        "no-var": "error",
-        "object-curly-spacing": ["error", "always"],
-        "prefer-const": "error",
-        "semi": ["error", "always"],
-        "space-before-blocks": "error",
-        "space-before-function-paren": ["error", {
-            "anonymous": "never",
-            "named": "never",
-            "asyncArrow": "always"
+        '@typescript-eslint/interface-name-prefix': 'off',
+        '@typescript-eslint/explicit-function-return-type': 'off',
+        '@typescript-eslint/explicit-module-boundary-types': 'off',
+        '@typescript-eslint/no-explicit-any': 'off',
+        '@typescript-eslint/no-unused-vars': ['warn', { vars: 'all', args: 'after-used', ignoreRestSiblings: false }],
+        'prettier/prettier': ['error', {
+            singleQuote: true,
+            printWidth: 100,
+            endOfLine: "auto",
         }],
-        "space-in-parens": "error",
-        "space-infix-ops": "error",
-        "space-unary-ops": "error",
-        "spaced-comment": "error",
-        "yoda": "error"
-    }
+        eqeqeq: ['warn', 'always']
+    },
 };
