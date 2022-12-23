@@ -167,30 +167,76 @@ export class AppService implements OnApplicationBootstrap, AsyncInitializable {
 
   async reply(content: string, channel: NonNewsChannel | string, options?: MessageOptions) {
     try {
-      if (isMessageChannel(channel)) {
-        if (channel.type !== 'DM') {
-          const permissions = channel.guild.me.permissionsIn(channel);
+      const theChannel = isMessageChannel(channel) ? channel : await this.getChannelById(channel);
 
-          if (!permissions.has('SEND_MESSAGES')) {
-            logger.warn(
-              `I don't have a permission to send a message to this channel: ${channel.name}`
-            );
-            return;
-          }
-        }
-        await channel.send(options ?? content);
-      } else {
-        const fetchedChannel = await this.getChannelById(channel);
-
-        if (fetchedChannel.isText() || fetchedChannel.isThread()) {
-          await fetchedChannel.sendTyping();
-          await fetchedChannel.send(options ?? content);
-        }
+      if (!theChannel) {
+        logger.warn(`There is no channel with id: ${channel}`);
+        return;
       }
-      logger.info(`${this.client.user.username}: ${content}`);
+
+      if (theChannel.isText() && theChannel.type !== 'DM') {
+        const permissions = theChannel.guild.me.permissionsIn(theChannel);
+
+        if (!permissions.has('SEND_MESSAGES')) {
+          logger.warn(
+            `I don't have a permission to send a message to this channel: ${theChannel.name}`
+          );
+          return;
+        }
+        await theChannel.sendTyping();
+        const message = await theChannel.send(options ?? content);
+
+        logger.info(`${this.client.user.username}: ${content}`);
+
+        return message;
+      }
     } catch (error) {
       logger.error(error);
     }
   }
 
+  async isMessagePresentInChannel(
+    content: string,
+    channel: NonNewsChannel | string,
+    when?: Date | number
+  ) {
+    try {
+      const chan = isMessageChannel(channel)
+        ? channel
+        : ((await this.getChannelById(channel)) as NonNewsChannel);
+
+      let messages: Collection<string, Message<boolean>>;
+
+      if (when) {
+        const parseDate = when instanceof Date ? when.getTime() : when * 1000;
+        const snowflake = (BigInt(parseDate) - BigInt(discordEpoch)) << 22n;
+
+        messages = await chan.messages.fetch({
+          around: snowflake.toString(),
+        });
+      } else {
+        const todaySixAm = new Date().setUTCHours(6, 0);
+        const todayNineAm = new Date().setUTCHours(9, 0);
+        const sixAmSnowflake = (BigInt(todaySixAm) - BigInt(discordEpoch)) << 22n;
+        const nineAmSnowflake = (BigInt(todayNineAm) - BigInt(1420070400000)) << 22n;
+
+        messages = await chan.messages.fetch({
+          after: sixAmSnowflake.toString(),
+          before: nineAmSnowflake.toString(),
+        });
+      }
+
+      const isMessage = messages.find((message) => {
+        return message.content === content || message.content.includes(content);
+      });
+
+      return !!isMessage;
+    } catch (error) {
+      logger.error(error);
+    }
+  }
+
+  private async getChannelById(id: string) {
+    return this.client.channels.cache.get(id) || (await this.client.channels.fetch(id));
+  }
 }
