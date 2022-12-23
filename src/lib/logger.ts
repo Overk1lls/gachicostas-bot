@@ -1,6 +1,5 @@
 import { resolve } from 'app-root-path';
 import { configure, getLogger, shutdown as loggerShutdown } from 'log4js';
-import { config } from './config';
 
 const loggerCategory = 'default';
 
@@ -30,7 +29,7 @@ configure({
   categories: {
     [loggerCategory]: {
       appenders: ['console', 'file'],
-      level: config.logLevel,
+      level: 'DEBUG',
     },
   },
 });
