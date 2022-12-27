@@ -27,7 +27,11 @@ export class TelegramService implements OnApplicationBootstrap, AsyncInitializab
     this.client.on('channel_post', async (message) => {
       const { text, date } = message;
 
-      if (text && text.startsWith('Овен', 2)) {
+      if (
+        text &&
+        text.startsWith('Овен', 2) &&
+        new Date(date * 1000).toDateString() === new Date().toDateString()
+      ) {
         const isPresent = await this.discordService.isMessagePresentInChannel(
           text,
           discordFloodChannelId,

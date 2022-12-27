@@ -170,8 +170,7 @@ export class AppService implements OnApplicationBootstrap, AsyncInitializable {
       const theChannel = isMessageChannel(channel) ? channel : await this.getChannelById(channel);
 
       if (!theChannel) {
-        logger.warn(`There is no channel with id: ${channel}`);
-        return;
+        throw new Error(`There is no channel with such id: ${channel}`);
       }
 
       if (theChannel.isText() && theChannel.type !== 'DM') {
@@ -205,6 +204,10 @@ export class AppService implements OnApplicationBootstrap, AsyncInitializable {
         ? channel
         : ((await this.getChannelById(channel)) as NonNewsChannel);
 
+      if (!chan) {
+        throw new Error(`There is no channel with such id: ${channel}`);
+      }
+
       let messages: Collection<string, Message<boolean>>;
 
       if (when) {
@@ -236,7 +239,7 @@ export class AppService implements OnApplicationBootstrap, AsyncInitializable {
     }
   }
 
-  private async getChannelById(id: string) {
-    return this.client.channels.cache.get(id) || (await this.client.channels.fetch(id));
+  private getChannelById(id: string) {
+    return this.client.channels.cache.get(id) || this.client.channels.fetch(id);
   }
 }
