@@ -4,7 +4,7 @@
   "description": "A simple Discord bot designed specifically for one of the World of Warcraft class-related communities.",
   "main": "dist/main.js",
   "scripts": {
-    "build": "nest build`",
+    "build": "nest build",
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
@@ -39,6 +39,7 @@
   "devDependencies": {
     "@babel/preset-env": "^7.16.11",
     "@babel/preset-typescript": "^7.16.7",
+    "@nestjs/cli": "^9.1.7",
     "@types/app-root-path": "^1.2.4",
     "@types/jest": "^27.4.0",
     "@types/node-telegram-bot-api": "^0.57.6",
