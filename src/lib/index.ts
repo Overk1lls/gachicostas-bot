@@ -1,5 +1,5 @@
 export * from './config';
-export * from './const';
+export * from './constants';
 export * from './enums';
 export * from './logger';
 export * from './regexps';
