@@ -1,8 +1,10 @@
 name: Deploy to Cloud Run from Source
 
 on:
-  push:
-    branches: [ "master" ]
+  workflow_run:
+    workflows: [ "Run ESLint" ]
+    types:
+      - "completed"
 
 env:
   PROJECT_ID: gachicostas-bot
@@ -11,6 +13,8 @@ env:
 
 jobs:
   deploy:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+
     permissions:
       contents: 'read'
       id-token: 'write'
