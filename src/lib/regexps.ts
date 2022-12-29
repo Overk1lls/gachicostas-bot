@@ -1,33 +1,21 @@
-export const questionRegexps = {
-  whoIsOnServer: /кто на сервере/i,
-  whatStatWeights: /веса? статов/i,
-  whatLegendary: /(какие легендарки)|(какая легендарка)/i,
-  whatCovenant: /(какие ковенанты)|(какой ковенант)/i,
-};
+export const whoIsQuestionRegex = /кто на сервере/i;
+export const orQuestionRegex = / или /i;
+export const discordTagRegex = /(<@\d{8,}>)/;
 
-export const regexps = {
-  discordTag: /(<@!\d{8,}>)/,
-  or: /или/i,
-};
+export const dhQuestions = [/веса? статов/i];
 
-export const dhQuestions = [
-  questionRegexps.whatCovenant,
-  questionRegexps.whatLegendary,
-  questionRegexps.whatStatWeights,
-];
-
-export const isRegexInText = (regex: RegExp | RegExp[], text: string): boolean => {
+export function isRegexInText(regex: RegExp | RegExp[], text: string) {
   if (Array.isArray(regex)) {
-    for (const regexp of regex) {
-      if (regexp.test(text)) {
+    for (const rx of regex) {
+      if (rx.test(text)) {
         return true;
       }
     }
     return false;
   }
   return regex.test(text);
-};
+}
 
-export const isStringMatchingRegex = (str: string, regex: RegExp) => {
+export function isRegexMatched(regex: RegExp, str: string) {
   return str.match(regex);
-};
+}

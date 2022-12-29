@@ -7,20 +7,21 @@ import {
   defaultAnswers,
   dhQuestions,
   discordEpoch,
+  discordTagRegex,
   getRandomArrayElement,
   isMessageChannel,
   isRegexInText,
-  isStringMatchingRegex,
+  isRegexMatched,
   logger,
   matAnswers,
   matWords,
   NonNewsChannel,
   orQuestionAnswers,
-  questionRegexps,
+  orQuestionRegex,
   randomNum,
-  regexps,
   Response,
   whoIsQuestionAnswers,
+  whoIsQuestionRegex,
 } from './lib';
 
 @Injectable()
@@ -41,24 +42,22 @@ export class AppService implements OnApplicationBootstrap, AsyncInitializable {
   }
 
   async init(): Promise<void> {
-    const token = this.configService.getOrThrow<string>('DISCORD_BOT_TOKEN');
-    await this.client.login(token);
+    try {
+      const token = this.configService.getOrThrow<string>('DISCORD_BOT_TEST');
+      await this.client.login(token);
 
-    this.client.on('ready', () => {
-      logger.info(`${this.client.user.username} is ready to work!`);
-    });
+      this.client.on('ready', () => {
+        logger.info(`${this.client.user.username} is ready to work!`);
+      });
 
-    this.client.on('messageCreate', async (message) => {
-      if (message.author.id === this.client.user.id || message.author.bot) {
-        return;
-      }
-      const { channel } = message;
+      this.client.on('messageCreate', async (message) => {
+        if (message.author.id === this.client.user.id || message.author.bot) {
+          return;
+        }
 
-      if (isMessageChannel(channel)) {
-        const { content } = message;
-        const words = content.split(' ');
-        const isMentioned = message.mentions.users.has(this.client.user.id);
+        const { channel, content } = message;
         const botRegex = new RegExp(this.client.user.username, 'i');
+        const isMentioned = message.mentions.users.has(this.client.user.id);
 
         /**
          * If the message is a question about DH
@@ -67,92 +66,99 @@ export class AppService implements OnApplicationBootstrap, AsyncInitializable {
           /**
            * If the message is a question about DH stat weights
            */
-          if (isRegexInText(questionRegexps.whatStatWeights, content)) {
+          if (isRegexInText(dhQuestions[0], content)) {
             this.reply(Response.StatWeights, channel);
           }
-        } else if (isMentioned || isStringMatchingRegex(content, botRegex)) {
+        } else if (isMentioned || isRegexMatched(botRegex, content)) {
+          /**
+           * If the message has a mention about the bot
+           */
           /**
            * Is the message a question?
            */
-          if (content.split('').pop() === '?') {
-            const isThereOr = words.find((word) => isStringMatchingRegex(word, regexps.or));
-            const isWhoIsQuestion = isRegexInText(questionRegexps.whoIsOnServer, content);
+          if (content.endsWith('?')) {
+            const isOrQuestion = isRegexInText(orQuestionRegex, content);
+            const isWhoIsQuestion = isRegexInText(whoIsQuestionRegex, content);
 
             /**
-             * If there is 'OR' in question, roll the dice (25 / 75%)
+             * If this is the 'or' question, roll the dice (25/75%)
              */
-            if (isThereOr && !isWhoIsQuestion) {
+            if (isOrQuestion && !isWhoIsQuestion) {
+              const textWithoutTag = content
+                .split(' ')
+                .filter((w) => !(discordTagRegex.test(w) || botRegex.test(w)))
+                .join(' ');
               const num = randomNum(0, 100);
-              const questions = content.split('?')[0].split(regexps.or);
-              const question = getRandomArrayElement(questions);
+              const questionWords = textWithoutTag.slice(0, -1).split(orQuestionRegex);
+              const chosenWord = getRandomArrayElement(questionWords);
 
               /**
-               * If we rolled 75%, send one of two answers
+               * If the roll is 75%, randomly response with one of the two question words
                */
-              if (num < 75) {
-                const answer = question
-                  .split(' ')
-                  .filter((q) => !q.match(regexps.discordTag))
-                  .join(' ');
-                this.reply(answer, channel);
-              } else {
-                /**
-                 * If we rolled 25%, roll and send one of prepared answers
-                 */
-                const answer = randomNum(0, orQuestionAnswers.length);
-                if (answer < 4) {
-                  this.reply(orQuestionAnswers[answer] + question, channel);
-                } else {
-                  this.reply(orQuestionAnswers[answer], channel);
-                }
+              let response: string = chosenWord;
+
+              /**
+               * If the roll is 25%, randomly response with one of the prepared answers
+               */
+              if (num >= 75) {
+                const answerIdx = randomNum(0, orQuestionAnswers.length);
+                response = orQuestionAnswers[answerIdx] + (answerIdx < 4 ? chosenWord : '');
               }
+
+              this.reply(response, channel);
             } else if (isWhoIsQuestion) {
               /**
-               * If it's the 'Who on the server ...' question
+               * If the message is the `Who's on the server ...` question
                */
-              const answer = randomNum(0, whoIsQuestionAnswers.length);
-              const userNum = randomNum(0, message.guild.memberCount);
+              const answerIdx = randomNum(0, whoIsQuestionAnswers.length);
+              const answer = whoIsQuestionAnswers[answerIdx];
 
-              const guildUsers = await message.guild.members.fetch({ force: true });
-              const chosenUser = guildUsers.at(userNum).user;
-              const { username, discriminator } = chosenUser;
+              let response: string;
 
-              this.reply(
-                answer < 3
-                  ? whoIsQuestionAnswers[answer]
-                  : `${whoIsQuestionAnswers[answer]} ${username}#${discriminator}`,
-                channel
-              );
+              if (answerIdx < 4) {
+                response = answer;
+              } else {
+                const members = message.guild.members.cache.filter((m) => !m.user.bot);
+                const memberIdx = randomNum(0, members.size);
+                const chosenOne = members.at(memberIdx).user;
+                const { username, discriminator } = chosenOne;
+
+                response = `${answer} ${username}#${discriminator}`;
+              }
+
+              this.reply(response, channel);
             } else {
               /**
-               * If it's a random question
+               * If the message is a random question
                */
-              const answer = getRandomArrayElement(defaultAnswers);
-              this.reply(answer, channel);
+              this.reply(getRandomArrayElement(defaultAnswers), channel);
             }
           } else {
             /**
-             * If bot was offended
+             * If the bot was offended
              */
             const matRegex = new RegExp(matWords.join('|'), 'i');
+
+            /**
+             * If the mat words are present in the text
+             */
             if (isRegexInText(matRegex, content)) {
               matWords.forEach((word) => {
                 const noMentionRegex = new RegExp(`${this.client.user.username} ${word}`, 'i');
-                const mentionRegex = new RegExp(regexps.discordTag + ` ${word}`, 'i');
+                const mentionRegex = new RegExp(`${discordTagRegex.source} ${word}`, 'i');
+
                 if (
                   (isMentioned && isRegexInText(mentionRegex, content)) ||
                   (!isMentioned && isRegexInText(noMentionRegex, content))
                 ) {
-                  const answer = getRandomArrayElement(matAnswers);
-                  this.reply(answer, channel);
+                  this.reply(getRandomArrayElement(matAnswers), channel);
                 }
               });
             } else if (isMentioned) {
               /**
-               * If bot was just tagged
+               * If the bot was just tagged
                */
-              const answer = getRandomArrayElement(botTaggingAnswers);
-              this.reply(answer, channel);
+              this.reply(getRandomArrayElement(botTaggingAnswers), channel);
             } else {
               /**
                * If something else
@@ -161,8 +167,10 @@ export class AppService implements OnApplicationBootstrap, AsyncInitializable {
             }
           }
         }
-      }
-    });
+      });
+    } catch (error) {
+      logger.error(error);
+    }
   }
 
   async reply(content: string, channel: NonNewsChannel | string, options?: MessageOptions) {
