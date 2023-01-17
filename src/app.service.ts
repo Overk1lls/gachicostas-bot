@@ -1,4 +1,4 @@
-import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
+import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Client, Collection, Intents, Message, MessageOptions } from 'discord.js';
 import {
@@ -12,7 +12,6 @@ import {
   isMessageChannel,
   isRegexInText,
   isRegexMatched,
-  logger,
   matAnswers,
   matWords,
   NonNewsChannel,
@@ -27,6 +26,7 @@ import {
 @Injectable()
 export class AppService implements OnApplicationBootstrap, AsyncInitializable {
   private client: Client;
+  private readonly logger = new Logger(AppService.name);
 
   constructor(private configService: ConfigService) {}
 
@@ -47,7 +47,7 @@ export class AppService implements OnApplicationBootstrap, AsyncInitializable {
       await this.client.login(token);
 
       this.client.on('ready', () => {
-        logger.info(`${this.client.user.username} is ready to work!`);
+        this.logger.log(`${this.client.user.username} is ready to work!`);
       });
 
       this.client.on('messageCreate', async (message) => {
@@ -178,7 +178,7 @@ export class AppService implements OnApplicationBootstrap, AsyncInitializable {
         }
       });
     } catch (error) {
-      logger.error(error);
+      this.logger.error(error);
     }
   }
 
@@ -194,7 +194,7 @@ export class AppService implements OnApplicationBootstrap, AsyncInitializable {
         const permissions = theChannel.guild.me.permissionsIn(theChannel);
 
         if (!permissions.has('SEND_MESSAGES')) {
-          logger.warn(
+          this.logger.warn(
             `I don't have a permission to send a message to this channel: ${theChannel.name}`
           );
           return;
@@ -202,12 +202,12 @@ export class AppService implements OnApplicationBootstrap, AsyncInitializable {
         await theChannel.sendTyping();
         const message = await theChannel.send(options ?? content);
 
-        logger.info(`${this.client.user.username}: ${content}`);
+        this.logger.log(`bot:message:sent ${theChannel.name}:${theChannel.guild.name}`);
 
         return message;
       }
     } catch (error) {
-      logger.error(error);
+      this.logger.error(error);
     }
   }
 
@@ -252,7 +252,7 @@ export class AppService implements OnApplicationBootstrap, AsyncInitializable {
 
       return !!isMessage;
     } catch (error) {
-      logger.error(error);
+      this.logger.error(error);
     }
   }
 

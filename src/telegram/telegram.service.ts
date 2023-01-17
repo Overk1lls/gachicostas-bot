@@ -1,13 +1,14 @@
 import TelegramBot from 'node-telegram-bot-api';
-import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
+import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AppService } from '../app.service';
-import { AsyncInitializable, discordFloodChannelId, logger } from '../lib';
+import { AsyncInitializable, discordFloodChannelId } from '../lib';
 import { Util } from 'discord.js';
 
 @Injectable()
 export class TelegramService implements OnApplicationBootstrap, AsyncInitializable {
   private client: TelegramBot;
+  private readonly logger = new Logger(TelegramService.name);
 
   constructor(private discordService: AppService, private configService: ConfigService) {}
 
@@ -22,7 +23,7 @@ export class TelegramService implements OnApplicationBootstrap, AsyncInitializab
   }
 
   async init(): Promise<void> {
-    logger.info('The Telegram bot is ready to work');
+    this.logger.log('The Telegram bot is ready to work');
 
     this.client.on('channel_post', async (message) => {
       const { text, date } = message;
