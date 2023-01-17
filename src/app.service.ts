@@ -4,8 +4,8 @@ import { Client, Collection, Intents, Message, MessageOptions } from 'discord.js
 import {
   AsyncInitializable,
   botTaggingAnswers,
+  commands,
   defaultAnswers,
-  dhQuestions,
   discordEpoch,
   discordTagRegex,
   getRandomArrayElement,
@@ -43,7 +43,7 @@ export class AppService implements OnApplicationBootstrap, AsyncInitializable {
 
   async init(): Promise<void> {
     try {
-      const token = this.configService.getOrThrow<string>('DISCORD_BOT_TEST');
+      const token = this.configService.getOrThrow<string>('DISCORD_BOT_TOKEN');
       await this.client.login(token);
 
       this.client.on('ready', () => {
@@ -51,23 +51,32 @@ export class AppService implements OnApplicationBootstrap, AsyncInitializable {
       });
 
       this.client.on('messageCreate', async (message) => {
-        if (message.author.id === this.client.user.id || message.author.bot) {
+        if (message.author.bot) {
           return;
         }
 
         const { channel, content } = message;
         const botRegex = new RegExp(this.client.user.username, 'i');
         const isMentioned = message.mentions.users.has(this.client.user.id);
+        const command = commands.find((c) => content.includes(c));
 
         /**
          * If the message is a question about DH
          */
-        if (isRegexInText(dhQuestions, content)) {
-          /**
-           * If the message is a question about DH stat weights
-           */
-          if (isRegexInText(dhQuestions[0], content)) {
-            this.reply(Response.StatWeights, channel);
+        if (command) {
+          switch (command) {
+            case commands[0]: {
+              this.reply(Response.StatWeights, channel);
+              break;
+            }
+            case commands[1]: {
+              this.reply(Response.Craft, channel);
+              break;
+            }
+            case commands[2]: {
+              this.reply(Response.Embellishments, channel);
+              break;
+            }
           }
         } else if (isMentioned || isRegexMatched(botRegex, content)) {
           /**

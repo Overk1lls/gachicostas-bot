@@ -1,6 +1,6 @@
 {
   "name": "gachicostas-bot",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "A simple Discord bot designed specifically for one of the World of Warcraft class-related communities.",
   "main": "dist/main.js",
   "scripts": {

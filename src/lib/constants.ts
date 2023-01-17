@@ -113,5 +113,7 @@ export const matAnswers = [
   'все так',
 ];
 
+export const commands = ['!веса', '!крафт', '!украшения'];
+
 export const discordFloodChannelId = '736192405270823026';
 export const discordEpoch = 1420070400000;
