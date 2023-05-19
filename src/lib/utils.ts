@@ -41,5 +41,5 @@ export function splitMessage(text: string, options?: SplitOptions) {
     }
     msg += (msg && msg !== prepend ? char : '') + chunk;
   }
-  return chunks.concat(msg).filter(m => m);
+  return chunks.concat(msg).filter((m) => m);
 }
