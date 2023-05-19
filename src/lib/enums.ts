@@ -18,3 +18,10 @@ export enum Response {
   Craft = 'Крафт:\n1. Аркан стихий\n2. Оружие\n3. Пояс',
   Embellishments = 'Украшения:\n1. Аркан стихий\n2. Подкладка из синего шелка\n3. Мешочек алхимических приправ (он не считается украшением)',
 }
+
+export enum MessageQueueProcessName {
+  Command = 'command',
+  OrQuestion = 'question:or',
+  WhoQuestion = 'question:who',
+  RandomQuestion = 'question:random',
+}
