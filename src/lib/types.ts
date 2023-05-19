@@ -1,4 +1,4 @@
-import { TextBasedChannel } from 'discord.js';
+import { Message, TextBasedChannel } from 'discord.js';
 
 export type Nullable<T> = T | null;
 export type Primitive = number | string | boolean | symbol | bigint;
@@ -22,3 +22,24 @@ export const isMessageChannel = (channel: any): channel is NonNewsChannel => {
     channel.type !== 'GUILD_NEWS_THREAD'
   );
 };
+
+export interface ICommand {
+  command: string;
+  channel: NonNewsChannel;
+}
+
+export interface IQuestion {
+  channel: NonNewsChannel;
+  question?: string;
+  botRegex?: RegExp;
+  message?: Message;
+}
+
+export interface IMessage {
+  channel: NonNewsChannel;
+  message?: string;
+  botUsername?: string;
+  isMentioned?: boolean;
+}
+
+export type MessageQueueType = ICommand | IQuestion | IMessage;

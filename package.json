@@ -1,6 +1,6 @@
 {
   "name": "gachicostas-bot",
-  "version": "2.0.0",
+  "version": "2.1.1",
   "description": "A simple Discord bot designed specifically for one of the World of Warcraft class-related communities.",
   "main": "dist/main.js",
   "scripts": {
@@ -23,16 +23,15 @@
   "author": "Yurii Pakhota",
   "license": "ISC",
   "dependencies": {
+    "@nestjs/bull": "^0.6.2",
     "@nestjs/common": "^9.2.1",
     "@nestjs/config": "^2.2.0",
     "@nestjs/core": "^9.2.1",
     "@nestjs/platform-express": "^9.2.1",
-    "app-root-path": "^3.0.0",
+    "bull": "^4.10.2",
     "discord.js": "^13.6.0",
     "dotenv": "^16.0.0",
     "inversify": "^6.0.1",
-    "log4js": "^6.6.1",
-    "node-fetch": "^3.2.0",
     "node-telegram-bot-api": "^0.60.0",
     "reflect-metadata": "^0.1.13"
   },
