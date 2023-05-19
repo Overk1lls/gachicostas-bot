@@ -126,22 +126,25 @@ export class AppService implements OnModuleInit, AsyncInitializable {
 
   async reply(content: string, channel: NonNewsChannel | string, options?: MessageOptions) {
     try {
-      const theChannel = isMessageChannel(channel) ? channel : await this.getChannelById(channel) as NonNewsChannel;
+      const theChannel = isMessageChannel(channel)
+        ? channel
+        : (await this.getChannelById(channel)) as NonNewsChannel;
 
       if (!theChannel) {
-        throw new Error(`There is no channel with such id: ${channel}`);
+        this.logger.warn(`There is no channel with such id: ${channel}`);
+        return;
       }
 
       if (theChannel.type === 'GUILD_TEXT') {
-        this.logger.debug(theChannel.guild.me.permissions);
-        const permissions = theChannel.guild.me.permissionsIn(theChannel);
+        const permissions = theChannel.permissionsFor(this.client.user).has('SEND_MESSAGES');
 
-        if (!permissions.has('SEND_MESSAGES')) {
+        if (!permissions) {
           this.logger.warn(
             `I don't have a permission to send a message to this channel: ${theChannel.name}`
           );
           return;
         }
+
         await theChannel.sendTyping();
         const message = await theChannel.send(options ?? content);
 
@@ -199,7 +202,7 @@ export class AppService implements OnModuleInit, AsyncInitializable {
     }
   }
 
-  private getChannelById(id: string) {
-    return this.client.channels.cache.get(id) || this.client.channels.fetch(id);
+  private async getChannelById(id: string) {
+    return this.client.channels.cache.get(id) || (await this.client.channels.fetch(id));
   }
 }
