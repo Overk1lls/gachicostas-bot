@@ -85,6 +85,8 @@ export class AppService implements OnModuleInit, AsyncInitializable {
           message.mentions.members.has(this.client.user.id);
         const command = commands.find((c) => content.includes(c));
 
+        await channel.sendTyping();
+
         /**
          * If the message is a question about DH
          */
