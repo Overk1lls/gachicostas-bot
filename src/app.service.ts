@@ -11,18 +11,17 @@ import {
   Partials,
   TextBasedChannel,
   MessageCreateOptions,
+  GuildTextBasedChannel,
 } from 'discord.js';
 import {
   AsyncInitializable,
   commands,
   discordEpoch,
-  isMessageChannel,
   isRegexInText,
   isRegexMatched,
   MessageQueueProcessName,
   MessageQueueType,
   MESSAGE_QUEUE,
-  NonNewsChannel,
   orQuestionRegex,
   whoIsQuestionRegex,
 } from './lib';
@@ -176,25 +175,25 @@ export class AppService implements OnModuleInit, AsyncInitializable {
 
   async isMessagePresentInChannel(
     content: string,
-    channel: NonNewsChannel | string,
+    where: GuildTextBasedChannel | string,
     when?: Date | number
   ) {
     try {
-      const chan = isMessageChannel(channel)
-        ? channel
-        : ((await this.getChannelById(channel)) as NonNewsChannel);
+      const channel = (await this.getChannelById(
+        typeof where === 'string' ? where : where.id
+      )) as GuildTextBasedChannel;
 
-      if (!chan) {
-        throw new Error(`There is no channel with such id: ${channel}`);
+      if (!channel) {
+        throw new Error(`There is no channel with such id: ${where}`);
       }
 
-      let messages: Collection<string, Message<boolean>>;
+      let messages: Collection<string, Message<true>>;
 
       if (when) {
         const parseDate = when instanceof Date ? when.getTime() : when * 1000;
         const snowflake = (BigInt(parseDate) - BigInt(discordEpoch)) << 22n;
 
-        messages = await chan.messages.fetch({
+        messages = await channel.messages.fetch({
           around: snowflake.toString(),
         });
       } else {
@@ -203,7 +202,7 @@ export class AppService implements OnModuleInit, AsyncInitializable {
         const sixAmSnowflake = (BigInt(todaySixAm) - BigInt(discordEpoch)) << 22n;
         const nineAmSnowflake = (BigInt(todayNineAm) - BigInt(1420070400000)) << 22n;
 
-        messages = await chan.messages.fetch({
+        messages = await channel.messages.fetch({
           after: sixAmSnowflake.toString(),
           before: nineAmSnowflake.toString(),
         });
