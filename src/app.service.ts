@@ -2,7 +2,16 @@ import { InjectQueue } from '@nestjs/bull/dist/decorators';
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Queue } from 'bull';
-import { Client, Collection, Intents, Message, MessageOptions } from 'discord.js';
+import {
+  ChannelType,
+  Client,
+  Collection,
+  GatewayIntentBits,
+  Message,
+  Partials,
+  TextBasedChannel,
+  MessageCreateOptions,
+} from 'discord.js';
 import {
   AsyncInitializable,
   commands,
@@ -30,7 +39,12 @@ export class AppService implements OnModuleInit, AsyncInitializable {
 
   async onModuleInit() {
     this.client = new Client({
-      intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES, Intents.FLAGS.GUILD_MEMBERS],
+      partials: [Partials.User, Partials.GuildMember, Partials.Message],
+      intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.GuildMembers,
+      ],
       presence: {
         status: 'online',
       },
@@ -40,22 +54,35 @@ export class AppService implements OnModuleInit, AsyncInitializable {
   }
 
   async init() {
-    try {
-      const token = this.configService.getOrThrow<string>('DISCORD_BOT_TEST');
-      await this.client.login(token);
+    const token = this.configService.getOrThrow<string>('DISCORD_BOT_TEST');
+    await this.client.login(token);
 
-      this.client.on('ready', () => {
-        this.logger.log(`${this.client.user.username} is ready to work!`);
-      });
+    this.client.on('ready', () =>
+      this.logger.log(`${this.client.user.username} is ready to work!`)
+    );
 
-      this.client.on('messageCreate', async (message) => {
-        if (message.author.bot || !message.channel.isText()) {
+    this.client.on('messageCreate', async (message) => {
+      try {
+        const { author, channel, content } = message;
+
+        if (author.bot || !channel.isTextBased()) {
           return;
         }
 
-        const { channel, content } = message;
+        if (
+          channel.type === ChannelType.GuildText &&
+          !channel.permissionsFor(this.client.user).has('SendMessages')
+        ) {
+          this.logger.warn(
+            `I don't have a permission to send a message to this channel: ${channel.name}`
+          );
+          return;
+        }
+
         const botRegex = new RegExp(this.client.user.username, 'i');
-        const isMentioned = message.mentions.users.has(this.client.user.id);
+        const isBotMentioned =
+          message.mentions.users.has(this.client.user.id) ||
+          message.mentions.members.has(this.client.user.id);
         const command = commands.find((c) => content.includes(c));
 
         /**
@@ -67,7 +94,7 @@ export class AppService implements OnModuleInit, AsyncInitializable {
             { command, channel },
             { removeOnComplete: true }
           );
-        } else if (isMentioned || isRegexMatched(botRegex, content)) {
+        } else if (isBotMentioned || isRegexMatched(botRegex, content)) {
           /**
            * Is the message a question?
            */
@@ -110,7 +137,7 @@ export class AppService implements OnModuleInit, AsyncInitializable {
               MessageQueueProcessName.TagMessage,
               {
                 channel,
-                isMentioned,
+                isMentioned: isBotMentioned,
                 message: content,
                 botUsername: this.client.user.username,
               },
@@ -118,42 +145,30 @@ export class AppService implements OnModuleInit, AsyncInitializable {
             );
           }
         }
-      });
-    } catch (error) {
-      this.logger.error(error);
-    }
+      } catch (error) {
+        this.logger.error(error);
+      }
+    });
   }
 
-  async reply(content: string, channel: NonNewsChannel | string, options?: MessageOptions) {
+  async reply(content: string | MessageCreateOptions, whereToReply: TextBasedChannel | string) {
     try {
-      const theChannel = isMessageChannel(channel)
-        ? channel
-        : (await this.getChannelById(channel)) as NonNewsChannel;
+      const channel = await this.getChannelById(
+        typeof whereToReply === 'string' ? whereToReply : whereToReply.id
+      );
 
-      if (!theChannel) {
-        this.logger.warn(`There is no channel with such id: ${channel}`);
+      if (!channel) {
+        this.logger.warn(`There is no channel with such id: ${whereToReply}`);
         return;
       }
 
-      if (theChannel.type === 'GUILD_TEXT') {
-        const permissions = theChannel.permissionsFor(this.client.user).has('SEND_MESSAGES');
-
-        if (!permissions) {
-          this.logger.warn(
-            `I don't have a permission to send a message to this channel: ${theChannel.name}`
-          );
-          return;
-        }
-
-        await theChannel.sendTyping();
-        const message = await theChannel.send(options ?? content);
-
-        this.logger.log(`bot:message:sent ${theChannel.name}:${theChannel.guild.name}`);
-
+      if (channel.isTextBased()) {
+        const message = await channel.send(content);
+        this.logger.log(`bot:message:sent ${channel.id}:${channel.url}`);
         return message;
       }
     } catch (error) {
-      this.logger.error(error);
+      this.logger.error(error.stack);
     }
   }
 
