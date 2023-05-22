@@ -3,7 +3,6 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Job } from 'bull';
 import { AppService } from './app.service';
 import {
-  commands,
   defaultAnswers,
   discordTagRegex,
   getRandomArrayElement,
@@ -21,6 +20,7 @@ import {
   isRegexInText,
   matAnswers,
   botTaggingAnswers,
+  commandAnswers,
 } from './lib';
 
 @Injectable()
@@ -34,20 +34,7 @@ export class AppProcessor {
   async handleCommand(job: Job<ICommand>) {
     const { command, channel } = job.data;
 
-    switch (command) {
-      case commands[0]: {
-        await this.appService.reply(Response.StatWeights, channel);
-        break;
-      }
-      case commands[1]: {
-        await this.appService.reply(Response.Craft, channel);
-        break;
-      }
-      case commands[2]: {
-        await this.appService.reply(Response.Embellishments, channel);
-        break;
-      }
-    }
+    await this.appService.reply(commandAnswers[command], channel);
   }
 
   @Process(MessageQueueProcessName.OrQuestion)

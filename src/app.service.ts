@@ -43,6 +43,7 @@ export class AppService implements OnModuleInit, AsyncInitializable {
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.GuildMembers,
+        GatewayIntentBits.MessageContent,
       ],
       presence: {
         status: 'online',
@@ -82,17 +83,19 @@ export class AppService implements OnModuleInit, AsyncInitializable {
         const isBotMentioned =
           message.mentions.users.has(this.client.user.id) ||
           message.mentions.members.has(this.client.user.id);
-        const command = commands.find((c) => content.includes(c));
+        const isDhCommand = commands.find((c) => content.includes(c));
 
-        await channel.sendTyping();
+        if (isBotMentioned || isDhCommand) {
+          await channel.sendTyping();
+        }
 
         /**
          * If the message is a question about DH
          */
-        if (command) {
+        if (isDhCommand) {
           await this.messageQueue.add(
             MessageQueueProcessName.Command,
-            { command, channel },
+            { command: isDhCommand, channel },
             { removeOnComplete: true }
           );
         } else if (isBotMentioned || isRegexMatched(botRegex, content)) {
@@ -107,19 +110,27 @@ export class AppService implements OnModuleInit, AsyncInitializable {
              * If this is the 'or' question
              */
             if (isOrQuestion && !isWhoIsQuestion) {
-              await this.messageQueue.add(MessageQueueProcessName.OrQuestion, {
-                channel,
-                botRegex,
-                question: content,
-              });
+              await this.messageQueue.add(
+                MessageQueueProcessName.OrQuestion,
+                {
+                  channel,
+                  botRegex,
+                  question: content,
+                },
+                { removeOnComplete: true }
+              );
             } else if (isWhoIsQuestion) {
               /**
                * If the message is the `Who's on the server ...` question
                */
-              await this.messageQueue.add(MessageQueueProcessName.WhoQuestion, {
-                channel,
-                question: content,
-              });
+              await this.messageQueue.add(
+                MessageQueueProcessName.WhoQuestion,
+                {
+                  channel,
+                  question: content,
+                },
+                { removeOnComplete: true }
+              );
             } else {
               /**
                * If the message is a random question
