@@ -165,7 +165,9 @@ export class AppService implements OnModuleInit, AsyncInitializable {
 
       if (channel.isTextBased()) {
         const message = await channel.send(content);
-        this.logger.log(`bot:message:sent ${channel.id}:${channel.url}`);
+
+        this.logger.log(`bot:message:sent ${channel.url}`);
+
         return message;
       }
     } catch (error) {
