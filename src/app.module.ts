@@ -1,11 +1,14 @@
 import config from './lib/config';
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { BullModule } from '@nestjs/bull';
 import { AppService } from './app.service';
 import { TelegramService } from './telegram/telegram.service';
 import { AppProcessor } from './app.processor';
 import { MESSAGE_QUEUE } from './lib';
+import { createBullBoard } from 'bull-board';
+import { BullAdapter } from 'bull-board/bullAdapter';
+import Queue from 'bull';
 
 @Module({
   imports: [
@@ -30,4 +33,12 @@ import { MESSAGE_QUEUE } from './lib';
   ],
   providers: [AppService, TelegramService, AppProcessor],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    const { router } = createBullBoard([
+      new BullAdapter(new Queue(MESSAGE_QUEUE)),
+    ]);
+
+    consumer.apply(router).forRoutes('/queues');
+  }
+}
