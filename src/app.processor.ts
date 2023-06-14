@@ -119,6 +119,10 @@ export class AppProcessor {
           (!isMentioned && isRegexInText(noMentionRegex, message))
         ) {
           await this.appService.reply(getRandomArrayElement(matAnswers), channelId);
+          return;
+        } else {
+          await this.appService.reply(getRandomArrayElement(defaultAnswers), channelId);
+          return;
         }
       }
     } else if (isMentioned) {
