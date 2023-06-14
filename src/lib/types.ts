@@ -1,24 +1,33 @@
-import { TextBasedChannel } from 'discord.js';
+import { User } from 'discord.js';
 
 export type Nullable<T> = T | null;
 export type Primitive = number | string | boolean | symbol | bigint;
 
-export interface AsyncInitializable {
-  init(): Promise<void>;
+export interface DhCommandJobType {
+  channelId: string;
+  command: string;
 }
 
-export interface Disposable {
-  dispose(): Promise<void>;
+export interface OrQuestionJobType {
+  channelId: string;
+  question: string;
+  botRegexString: string;
 }
 
-export type NonNewsChannel = Exclude<TextBasedChannel, 'NewsChannel' | 'VoiceChannel'>;
+export interface WhoQuestionJobType {
+  channelId: string;
+  chosen: User;
+}
 
-export const isMessageChannel = (channel: any): channel is NonNewsChannel => {
-  return (
-    typeof channel !== 'string' &&
-    'type' in channel &&
-    channel.type !== 'GUILD_NEWS' &&
-    channel.type !== 'GUILD_VOICE' &&
-    channel.type !== 'GUILD_NEWS_THREAD'
-  );
-};
+export interface RandomMessageJobType {
+  channelId: string;
+  isMentioned?: boolean;
+  message?: string;
+  botUsername?: string;
+}
+
+export type MessageQueueType =
+  | DhCommandJobType
+  | OrQuestionJobType
+  | RandomMessageJobType
+  | WhoQuestionJobType;

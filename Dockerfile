@@ -1,38 +1,17 @@
-FROM node:18 AS development
+FROM node:lts-alpine
 
-WORKDIR /usr/gachicostas-bot
+WORKDIR /usr/src/gachicostas-bot
 
-COPY --chown=node:node package*.json ./
+COPY package*.json ./
 
 RUN npm ci
 
-COPY --chown=node:node . .
-
-USER node
-
-FROM node:18 AS build
-
-WORKDIR /usr/gachicostas-bot
-
-COPY --chown=node:node package*.json ./
-
-COPY --chown=node:node --from=development /usr/gachicostas-bot/node_modules ./node_modules  
-
-COPY --chown=node:node . .
+COPY . .
 
 RUN npm run build
 
 ENV NODE_ENV=production
 
-RUN npm ci --omit=dev
-
-RUN npm cache clean --force
-
-USER node
-
-FROM node:18 AS production
-
-COPY --chown=node:node --from=build /usr/gachicostas-bot/node_modules ./node_modules
-COPY --chown=node:node --from=build /usr/gachicostas-bot/dist ./dist
+EXPOSE 80
 
 CMD [ "node", "dist/main.js" ]

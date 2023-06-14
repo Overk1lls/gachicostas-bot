@@ -1,17 +1,17 @@
 import TelegramBot from 'node-telegram-bot-api';
-import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AppService } from '../app.service';
-import { AsyncInitializable, discordFloodChannelId, logger } from '../lib';
-import { Util } from 'discord.js';
+import { dhDiscordFloodChannelId, splitMessage } from '../lib';
 
 @Injectable()
-export class TelegramService implements OnApplicationBootstrap, AsyncInitializable {
+export class TelegramService implements OnModuleInit {
   private client: TelegramBot;
+  private readonly logger = new Logger(TelegramService.name);
 
   constructor(private discordService: AppService, private configService: ConfigService) {}
 
-  async onApplicationBootstrap() {
+  async onModuleInit() {
     const token = this.configService.getOrThrow<string>('TELEGRAM_BOT_TOKEN');
 
     this.client = new TelegramBot(token, {
@@ -22,7 +22,7 @@ export class TelegramService implements OnApplicationBootstrap, AsyncInitializab
   }
 
   async init(): Promise<void> {
-    logger.info('The Telegram bot is ready to work');
+    this.logger.log('The Telegram bot is ready to work');
 
     this.client.on('channel_post', async (message) => {
       const { text, date } = message;
@@ -34,17 +34,19 @@ export class TelegramService implements OnApplicationBootstrap, AsyncInitializab
       ) {
         const isPresent = await this.discordService.isMessagePresentInChannel(
           text,
-          discordFloodChannelId,
+          dhDiscordFloodChannelId,
           date
         );
 
         if (!isPresent) {
-          const split = Util.splitMessage(text);
-          const message = await this.discordService.reply(`>>> ${split[0]}`, discordFloodChannelId);
-
-          for (let i = 1; i < split.length; i++) {
-            await this.discordService.reply(`>>> ${split[i]}`, message.channel);
+          const split = splitMessage(text);
+          for (const chunk of split) {
+            await this.discordService.reply(`>>> ${chunk}`, dhDiscordFloodChannelId);
           }
+        } else {
+          this.logger.warn(
+            'The telegram bot message is already present on the DH discord channel!'
+          );
         }
       }
     });
