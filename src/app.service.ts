@@ -13,6 +13,7 @@ import {
   MessageCreateOptions,
   GuildTextBasedChannel,
   User,
+  Events,
 } from 'discord.js';
 import {
   AsyncInitializable,
@@ -59,11 +60,11 @@ export class AppService implements OnModuleInit, AsyncInitializable {
     const token = this.configService.getOrThrow<string>('DISCORD_BOT_TEST');
     await this.client.login(token);
 
-    this.client.on('ready', () =>
+    this.client.on(Events.ClientReady, () =>
       this.logger.log(`${this.client.user.username} is ready to work!`)
     );
 
-    this.client.on('messageCreate', async (message) => {
+    this.client.on(Events.MessageCreate, async (message) => {
       try {
         const { author, channel, content } = message;
 
