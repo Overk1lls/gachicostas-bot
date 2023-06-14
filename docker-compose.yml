@@ -1,0 +1,24 @@
+version: '3'
+services:
+  redis:
+    image: redis:7.0.11
+    container_name: redis
+    networks:
+      - app-network
+  
+  gachicostas-bot:
+    image: gachicostas-bot:latest
+    container_name: gachicostas-bot
+    restart: unless-stopped
+    env_file: ./config/.env
+    environment:
+      - NODE_ENV=production
+    ports:
+      - 80:8080
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+    

@@ -1,38 +1,53 @@
-import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
+import { InjectQueue } from '@nestjs/bull';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Client, Collection, Intents, Message, MessageOptions } from 'discord.js';
+import { Queue } from 'bull';
 import {
-  AsyncInitializable,
-  botTaggingAnswers,
-  defaultAnswers,
-  dhQuestions,
+  ChannelType,
+  Client,
+  Collection,
+  GatewayIntentBits,
+  Message,
+  Partials,
+  TextBasedChannel,
+  MessageCreateOptions,
+  GuildTextBasedChannel,
+  User,
+  Events,
+} from 'discord.js';
+import {
+  commands,
   discordEpoch,
-  discordTagRegex,
-  getRandomArrayElement,
-  isMessageChannel,
   isRegexInText,
   isRegexMatched,
-  logger,
-  matAnswers,
-  matWords,
-  NonNewsChannel,
-  orQuestionAnswers,
+  MessageQueueProcessName,
+  MessageQueueType,
+  MESSAGE_QUEUE,
   orQuestionRegex,
-  randomNum,
-  Response,
-  whoIsQuestionAnswers,
   whoIsQuestionRegex,
+  getRandomArrayElement,
+  getBullOptions,
 } from './lib';
 
 @Injectable()
-export class AppService implements OnApplicationBootstrap, AsyncInitializable {
+export class AppService implements OnModuleInit {
   private client: Client;
+  private readonly logger = new Logger(AppService.name);
 
-  constructor(private configService: ConfigService) {}
+  constructor(
+    private configService: ConfigService,
+    @InjectQueue(MESSAGE_QUEUE) private messageQueue: Queue<MessageQueueType>
+  ) {}
 
-  async onApplicationBootstrap() {
+  async onModuleInit() {
     this.client = new Client({
-      intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES, Intents.FLAGS.GUILD_MEMBERS],
+      partials: [Partials.User, Partials.GuildMember, Partials.Message],
+      intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.GuildMembers,
+        GatewayIntentBits.MessageContent,
+      ],
       presence: {
         status: 'online',
       },
@@ -41,38 +56,52 @@ export class AppService implements OnApplicationBootstrap, AsyncInitializable {
     await this.init();
   }
 
-  async init(): Promise<void> {
-    try {
-      const token = this.configService.getOrThrow<string>('DISCORD_BOT_TOKEN');
-      await this.client.login(token);
+  async init() {
+    const token = this.configService.getOrThrow<string>('DISCORD_BOT_TOKEN');
+    await this.client.login(token);
 
-      this.client.on('ready', () => {
-        logger.info(`${this.client.user.username} is ready to work!`);
-      });
+    this.client.on(Events.ClientReady, () =>
+      this.logger.log(`${this.client.user.username} is ready to work!`)
+    );
 
-      this.client.on('messageCreate', async (message) => {
-        if (message.author.id === this.client.user.id || message.author.bot) {
+    this.client.on(Events.MessageCreate, async (message) => {
+      try {
+        const { author, channel, content } = message;
+
+        if (author.bot || !channel.isTextBased()) {
           return;
         }
 
-        const { channel, content } = message;
+        if (
+          channel.type === ChannelType.GuildText &&
+          !channel.permissionsFor(this.client.user).has('SendMessages')
+        ) {
+          this.logger.warn(
+            `I don't have a permission to send a message to this channel: ${channel.name}`
+          );
+          return;
+        }
+
         const botRegex = new RegExp(this.client.user.username, 'i');
-        const isMentioned = message.mentions.users.has(this.client.user.id);
+        const isBotMentioned =
+          message.mentions.users.has(this.client.user.id) ||
+          message.mentions.members.has(this.client.user.id);
+        const isDhCommand = commands.find((c) => content.includes(c));
+
+        if (isBotMentioned || isDhCommand) {
+          await channel.sendTyping();
+        }
 
         /**
          * If the message is a question about DH
          */
-        if (isRegexInText(dhQuestions, content)) {
-          /**
-           * If the message is a question about DH stat weights
-           */
-          if (isRegexInText(dhQuestions[0], content)) {
-            this.reply(Response.StatWeights, channel);
-          }
-        } else if (isMentioned || isRegexMatched(botRegex, content)) {
-          /**
-           * If the message has a mention about the bot
-           */
+        if (isDhCommand) {
+          await this.messageQueue.add(
+            MessageQueueProcessName.Command,
+            { command: isDhCommand, channelId: channel.id },
+            getBullOptions()
+          );
+        } else if (isBotMentioned || isRegexMatched(botRegex, content)) {
           /**
            * Is the message a question?
            */
@@ -81,148 +110,109 @@ export class AppService implements OnApplicationBootstrap, AsyncInitializable {
             const isWhoIsQuestion = isRegexInText(whoIsQuestionRegex, content);
 
             /**
-             * If this is the 'or' question, roll the dice (25/75%)
+             * If this is the 'or' question
              */
             if (isOrQuestion && !isWhoIsQuestion) {
-              const textWithoutTag = content
-                .split(' ')
-                .filter((w) => !(discordTagRegex.test(w) || botRegex.test(w)))
-                .join(' ');
-              const num = randomNum(0, 100);
-              const questionWords = textWithoutTag.slice(0, -1).split(orQuestionRegex);
-              const chosenWord = getRandomArrayElement(questionWords);
-
-              /**
-               * If the roll is 75%, randomly response with one of the two question words
-               */
-              let response: string = chosenWord;
-
-              /**
-               * If the roll is 25%, randomly response with one of the prepared answers
-               */
-              if (num >= 75) {
-                const answerIdx = randomNum(0, orQuestionAnswers.length);
-                response = orQuestionAnswers[answerIdx] + (answerIdx < 4 ? chosenWord : '');
-              }
-
-              this.reply(response, channel);
+              await this.messageQueue.add(
+                MessageQueueProcessName.OrQuestion,
+                {
+                  channelId: channel.id,
+                  botRegexString: botRegex.source,
+                  question: content,
+                },
+                getBullOptions()
+              );
             } else if (isWhoIsQuestion) {
               /**
                * If the message is the `Who's on the server ...` question
                */
-              const answerIdx = randomNum(0, whoIsQuestionAnswers.length);
-              const answer = whoIsQuestionAnswers[answerIdx];
+              const members = await message.guild.members.fetch();
+              const theChosen = getRandomArrayElement([...members.values()]);
 
-              let response: string;
-
-              if (answerIdx < 4) {
-                response = answer;
-              } else {
-                const members = await message.guild.members.fetch({ force: true });
-                const memberIdx = randomNum(0, members.size);
-                const chosenOne = members.at(memberIdx).user;
-                const { username, discriminator } = chosenOne;
-
-                response = `${answer} ${username}#${discriminator}`;
-              }
-
-              this.reply(response, channel);
+              await this.messageQueue.add(
+                MessageQueueProcessName.WhoQuestion,
+                {
+                  channelId: channel.id,
+                  chosen: theChosen.user.toJSON() as User,
+                },
+                getBullOptions()
+              );
             } else {
               /**
                * If the message is a random question
                */
-              this.reply(getRandomArrayElement(defaultAnswers), channel);
+              await this.messageQueue.add(
+                MessageQueueProcessName.RandomQuestion,
+                { channelId: channel.id },
+                getBullOptions()
+              );
             }
           } else {
             /**
-             * If the bot was offended
+             * If a random message
              */
-            const matRegex = new RegExp(matWords.join('|'), 'i');
-
-            /**
-             * If the mat words are present in the text
-             */
-            if (isRegexInText(matRegex, content)) {
-              matWords.forEach((word) => {
-                const noMentionRegex = new RegExp(`${this.client.user.username} ${word}`, 'i');
-                const mentionRegex = new RegExp(`${discordTagRegex.source} ${word}`, 'i');
-
-                if (
-                  (isMentioned && isRegexInText(mentionRegex, content)) ||
-                  (!isMentioned && isRegexInText(noMentionRegex, content))
-                ) {
-                  this.reply(getRandomArrayElement(matAnswers), channel);
-                }
-              });
-            } else if (isMentioned) {
-              /**
-               * If the bot was just tagged
-               */
-              this.reply(getRandomArrayElement(botTaggingAnswers), channel);
-            } else {
-              /**
-               * If something else
-               */
-              this.reply(Response.NoQuestion, channel);
-            }
+            await this.messageQueue.add(
+              MessageQueueProcessName.TagMessage,
+              {
+                channelId: channel.id,
+                isMentioned: isBotMentioned,
+                message: content,
+                botUsername: this.client.user.username,
+              },
+              getBullOptions()
+            );
           }
         }
-      });
-    } catch (error) {
-      logger.error(error);
-    }
+      } catch (error) {
+        this.logger.error(error);
+      }
+    });
   }
 
-  async reply(content: string, channel: NonNewsChannel | string, options?: MessageOptions) {
+  async reply(content: string | MessageCreateOptions, whereToReply: TextBasedChannel | string) {
     try {
-      const theChannel = isMessageChannel(channel) ? channel : await this.getChannelById(channel);
+      const channel = await this.getChannelById(
+        typeof whereToReply === 'string' ? whereToReply : whereToReply.id
+      );
 
-      if (!theChannel) {
-        throw new Error(`There is no channel with such id: ${channel}`);
+      if (!channel) {
+        this.logger.warn(`There is no channel with such id: ${whereToReply}`);
+        return;
       }
 
-      if (theChannel.isText() && theChannel.type !== 'DM') {
-        const permissions = theChannel.guild.me.permissionsIn(theChannel);
+      if (channel.isTextBased()) {
+        const message = await channel.send(content);
 
-        if (!permissions.has('SEND_MESSAGES')) {
-          logger.warn(
-            `I don't have a permission to send a message to this channel: ${theChannel.name}`
-          );
-          return;
-        }
-        await theChannel.sendTyping();
-        const message = await theChannel.send(options ?? content);
-
-        logger.info(`${this.client.user.username}: ${content}`);
+        this.logger.log(`bot:message:sent ${channel.url}`);
 
         return message;
       }
     } catch (error) {
-      logger.error(error);
+      this.logger.error(error.stack);
     }
   }
 
   async isMessagePresentInChannel(
     content: string,
-    channel: NonNewsChannel | string,
+    where: GuildTextBasedChannel | string,
     when?: Date | number
   ) {
     try {
-      const chan = isMessageChannel(channel)
-        ? channel
-        : ((await this.getChannelById(channel)) as NonNewsChannel);
+      const channel = (await this.getChannelById(
+        typeof where === 'string' ? where : where.id
+      )) as GuildTextBasedChannel;
 
-      if (!chan) {
-        throw new Error(`There is no channel with such id: ${channel}`);
+      if (!channel) {
+        throw new Error(`There is no channel with such id: ${where}`);
       }
 
-      let messages: Collection<string, Message<boolean>>;
+      let messages: Collection<string, Message<true>>;
 
       if (when) {
         const parseDate = when instanceof Date ? when.getTime() : when * 1000;
         const snowflake = (BigInt(parseDate) - BigInt(discordEpoch)) << 22n;
 
-        messages = await chan.messages.fetch({
+        messages = await channel.messages.fetch({
           around: snowflake.toString(),
         });
       } else {
@@ -231,7 +221,7 @@ export class AppService implements OnApplicationBootstrap, AsyncInitializable {
         const sixAmSnowflake = (BigInt(todaySixAm) - BigInt(discordEpoch)) << 22n;
         const nineAmSnowflake = (BigInt(todayNineAm) - BigInt(1420070400000)) << 22n;
 
-        messages = await chan.messages.fetch({
+        messages = await channel.messages.fetch({
           after: sixAmSnowflake.toString(),
           before: nineAmSnowflake.toString(),
         });
@@ -243,11 +233,11 @@ export class AppService implements OnApplicationBootstrap, AsyncInitializable {
 
       return !!isMessage;
     } catch (error) {
-      logger.error(error);
+      this.logger.error(error);
     }
   }
 
-  private getChannelById(id: string) {
-    return this.client.channels.cache.get(id) || this.client.channels.fetch(id);
+  private async getChannelById(id: string) {
+    return this.client.channels.cache.get(id) || (await this.client.channels.fetch(id));
   }
 }
