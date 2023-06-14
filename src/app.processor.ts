@@ -6,8 +6,8 @@ import {
   defaultAnswers,
   discordTagRegex,
   getRandomArrayElement,
-  ICommand,
-  IQuestion,
+  DhCommandJobType,
+  OrQuestionJobType,
   MessageQueueProcessName,
   MESSAGE_QUEUE,
   orQuestionAnswers,
@@ -31,10 +31,10 @@ export class AppProcessor {
   constructor(private readonly appService: AppService) {}
 
   @Process(MessageQueueProcessName.Command)
-  async handleCommand(job: Job<ICommand>) {
-    const { command, channel } = job.data;
+  async handleCommand(job: Job<DhCommandJobType>) {
+    const { command, channelId } = job.data;
 
-    await this.appService.reply(commandAnswers[command], channel);
+    await this.appService.reply(commandAnswers[command], channelId);
   }
 
   @Process(MessageQueueProcessName.OrQuestion)

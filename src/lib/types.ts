@@ -3,8 +3,9 @@ import { Message } from 'discord.js';
 export type Nullable<T> = T | null;
 export type Primitive = number | string | boolean | symbol | bigint;
 
-export interface AsyncInitializable {
-  init(): Promise<void>;
+export interface DhCommandJobType {
+  channelId: string;
+  command: string;
 }
 
 export interface OrQuestionJobType {

@@ -95,7 +95,7 @@ export class AppService implements OnModuleInit, AsyncInitializable {
         if (isDhCommand) {
           await this.messageQueue.add(
             MessageQueueProcessName.Command,
-            { command: isDhCommand, channel },
+            { command: isDhCommand, channelId: channel.id },
             { removeOnComplete: true }
           );
         } else if (isBotMentioned || isRegexMatched(botRegex, content)) {
