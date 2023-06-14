@@ -1,17 +1,17 @@
 import TelegramBot from 'node-telegram-bot-api';
-import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AppService } from '../app.service';
-import { AsyncInitializable, dhDiscordFloodChannelId, splitMessage } from '../lib';
+import { dhDiscordFloodChannelId, splitMessage } from '../lib';
 
 @Injectable()
-export class TelegramService implements OnApplicationBootstrap, AsyncInitializable {
+export class TelegramService implements OnModuleInit {
   private client: TelegramBot;
   private readonly logger = new Logger(TelegramService.name);
 
   constructor(private discordService: AppService, private configService: ConfigService) {}
 
-  async onApplicationBootstrap() {
+  async onModuleInit() {
     const token = this.configService.getOrThrow<string>('TELEGRAM_BOT_TOKEN');
 
     this.client = new TelegramBot(token, {

@@ -1,4 +1,4 @@
-import { InjectQueue } from '@nestjs/bull/dist/decorators';
+import { InjectQueue } from '@nestjs/bull';
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Queue } from 'bull';
@@ -16,7 +16,6 @@ import {
   Events,
 } from 'discord.js';
 import {
-  AsyncInitializable,
   commands,
   discordEpoch,
   isRegexInText,
@@ -27,10 +26,11 @@ import {
   orQuestionRegex,
   whoIsQuestionRegex,
   getRandomArrayElement,
+  getBullOptions,
 } from './lib';
 
 @Injectable()
-export class AppService implements OnModuleInit, AsyncInitializable {
+export class AppService implements OnModuleInit {
   private client: Client;
   private readonly logger = new Logger(AppService.name);
 
@@ -57,7 +57,7 @@ export class AppService implements OnModuleInit, AsyncInitializable {
   }
 
   async init() {
-    const token = this.configService.getOrThrow<string>('DISCORD_BOT_TEST');
+    const token = this.configService.getOrThrow<string>('DISCORD_BOT_TOKEN');
     await this.client.login(token);
 
     this.client.on(Events.ClientReady, () =>
@@ -99,7 +99,7 @@ export class AppService implements OnModuleInit, AsyncInitializable {
           await this.messageQueue.add(
             MessageQueueProcessName.Command,
             { command: isDhCommand, channelId: channel.id },
-            { removeOnComplete: true }
+            getBullOptions()
           );
         } else if (isBotMentioned || isRegexMatched(botRegex, content)) {
           /**
@@ -120,7 +120,7 @@ export class AppService implements OnModuleInit, AsyncInitializable {
                   botRegexString: botRegex.source,
                   question: content,
                 },
-                { removeOnComplete: true }
+                getBullOptions()
               );
             } else if (isWhoIsQuestion) {
               /**
@@ -135,11 +135,7 @@ export class AppService implements OnModuleInit, AsyncInitializable {
                   channelId: channel.id,
                   chosen: theChosen.user.toJSON() as User,
                 },
-                {
-                  removeOnComplete: true,
-                  removeOnFail: true,
-                  timeout: 5000,
-                }
+                getBullOptions()
               );
             } else {
               /**
@@ -148,7 +144,7 @@ export class AppService implements OnModuleInit, AsyncInitializable {
               await this.messageQueue.add(
                 MessageQueueProcessName.RandomQuestion,
                 { channelId: channel.id },
-                { removeOnComplete: true }
+                getBullOptions()
               );
             }
           } else {
@@ -163,7 +159,7 @@ export class AppService implements OnModuleInit, AsyncInitializable {
                 message: content,
                 botUsername: this.client.user.username,
               },
-              { removeOnComplete: true }
+              getBullOptions()
             );
           }
         }
