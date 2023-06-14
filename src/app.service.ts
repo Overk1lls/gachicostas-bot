@@ -113,8 +113,8 @@ export class AppService implements OnModuleInit, AsyncInitializable {
               await this.messageQueue.add(
                 MessageQueueProcessName.OrQuestion,
                 {
-                  channel,
-                  botRegex,
+                  channelId: channel.id,
+                  botRegexString: botRegex.source,
                   question: content,
                 },
                 { removeOnComplete: true }

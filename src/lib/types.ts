@@ -7,8 +7,10 @@ export interface AsyncInitializable {
   init(): Promise<void>;
 }
 
-export interface Disposable {
-  dispose(): Promise<void>;
+export interface OrQuestionJobType {
+  channelId: string;
+  question: string;
+  botRegexString: string;
 }
 
 export interface ICommand {

@@ -43,7 +43,7 @@ export class AppProcessor {
 
     const textWithoutTag = question
       .split(' ')
-      .filter((w) => !(discordTagRegex.test(w) || botRegex.test(w)))
+      .filter((w) => !(discordTagRegex.test(w) || new RegExp(botRegexString).test(w)))
       .join(' ');
     const questionWords = textWithoutTag.slice(0, -1).split(orQuestionRegex);
     const chosenWord = getRandomArrayElement(questionWords);
