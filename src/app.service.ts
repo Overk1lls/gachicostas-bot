@@ -12,6 +12,7 @@ import {
   TextBasedChannel,
   MessageCreateOptions,
   GuildTextBasedChannel,
+  User,
 } from 'discord.js';
 import {
   AsyncInitializable,
@@ -24,6 +25,7 @@ import {
   MESSAGE_QUEUE,
   orQuestionRegex,
   whoIsQuestionRegex,
+  getRandomArrayElement,
 } from './lib';
 
 @Injectable()
@@ -144,7 +146,7 @@ export class AppService implements OnModuleInit, AsyncInitializable {
                */
               await this.messageQueue.add(
                 MessageQueueProcessName.RandomQuestion,
-                { channel },
+                { channelId: channel.id },
                 { removeOnComplete: true }
               );
             }
@@ -155,7 +157,7 @@ export class AppService implements OnModuleInit, AsyncInitializable {
             await this.messageQueue.add(
               MessageQueueProcessName.TagMessage,
               {
-                channel,
+                channelId: channel.id,
                 isMentioned: isBotMentioned,
                 message: content,
                 botUsername: this.client.user.username,

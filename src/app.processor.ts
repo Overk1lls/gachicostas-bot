@@ -15,12 +15,13 @@ import {
   randomNum,
   Response,
   whoIsQuestionAnswers,
-  IMessage,
+  RandomMessageJobType,
   matWords,
   isRegexInText,
   matAnswers,
   botTaggingAnswers,
   commandAnswers,
+  WhoQuestionJobType,
 } from './lib';
 
 @Injectable()
@@ -38,8 +39,8 @@ export class AppProcessor {
   }
 
   @Process(MessageQueueProcessName.OrQuestion)
-  async handleOrQuestion(job: Job<IQuestion>) {
-    const { question, botRegex, channel } = job.data;
+  async handleOrQuestion(job: Job<OrQuestionJobType>) {
+    const { question, botRegexString, channelId } = job.data;
 
     const textWithoutTag = question
       .split(' ')
@@ -66,11 +67,11 @@ export class AppProcessor {
       response = orQuestionAnswers[answerIdx] + (answerIdx < 4 ? chosenWord : '');
     }
 
-    await this.appService.reply(response, channel);
+    await this.appService.reply(response, channelId);
   }
 
   @Process(MessageQueueProcessName.WhoQuestion)
-  async handleWhoQuestion(job: Job<WhoQuestion>) {
+  async handleWhoQuestion(job: Job<WhoQuestionJobType>) {
     const { chosen, channelId } = job.data;
 
     const answerIdx = randomNum(0, whoIsQuestionAnswers.length);
@@ -90,15 +91,15 @@ export class AppProcessor {
   }
 
   @Process(MessageQueueProcessName.RandomQuestion)
-  async handleRandomQuestion(job: Job<IQuestion>) {
-    const { channel } = job.data;
+  async handleRandomQuestion(job: Job<RandomMessageJobType>) {
+    const { channelId } = job.data;
 
-    await this.appService.reply(getRandomArrayElement(defaultAnswers), channel);
+    await this.appService.reply(getRandomArrayElement(defaultAnswers), channelId);
   }
 
   @Process(MessageQueueProcessName.TagMessage)
-  async handleTagMessage(job: Job<IMessage>) {
-    const { message, channel, botUsername, isMentioned } = job.data;
+  async handleTagMessage(job: Job<RandomMessageJobType>) {
+    const { message, channelId, botUsername, isMentioned } = job.data;
 
     /**
      * If the bot is offended
@@ -117,19 +118,19 @@ export class AppProcessor {
           (isMentioned && isRegexInText(mentionRegex, message)) ||
           (!isMentioned && isRegexInText(noMentionRegex, message))
         ) {
-          await this.appService.reply(getRandomArrayElement(matAnswers), channel);
+          await this.appService.reply(getRandomArrayElement(matAnswers), channelId);
         }
       }
     } else if (isMentioned) {
       /**
        * If the bot is just tagged
        */
-      await this.appService.reply(getRandomArrayElement(botTaggingAnswers), channel);
+      await this.appService.reply(getRandomArrayElement(botTaggingAnswers), channelId);
     } else {
       /**
        * If something else
        */
-      await this.appService.reply(Response.NoQuestion, channel);
+      await this.appService.reply(Response.NoQuestion, channelId);
     }
   }
 }

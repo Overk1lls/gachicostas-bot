@@ -1,4 +1,4 @@
-import { Message } from 'discord.js';
+import { User } from 'discord.js';
 
 export type Nullable<T> = T | null;
 export type Primitive = number | string | boolean | symbol | bigint;
@@ -14,23 +14,20 @@ export interface OrQuestionJobType {
   botRegexString: string;
 }
 
-export interface ICommand {
-  command: string;
-  channel: Message['channel'];
+export interface WhoQuestionJobType {
+  channelId: string;
+  chosen: User;
 }
 
-export interface IQuestion {
-  channel: Message['channel'];
-  question?: string;
-  botRegex?: RegExp;
-  message?: Message;
-}
-
-export interface IMessage {
-  channel: Message['channel'];
+export interface RandomMessageJobType {
+  channelId: string;
+  isMentioned?: boolean;
   message?: string;
   botUsername?: string;
-  isMentioned?: boolean;
 }
 
-export type MessageQueueType = ICommand | IQuestion | IMessage;
+export type MessageQueueType =
+  | DhCommandJobType
+  | OrQuestionJobType
+  | RandomMessageJobType
+  | WhoQuestionJobType;
