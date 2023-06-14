@@ -70,8 +70,8 @@ export class AppProcessor {
   }
 
   @Process(MessageQueueProcessName.WhoQuestion)
-  async handleWhoQuestion(job: Job<IQuestion>) {
-    const { message, channel } = job.data;
+  async handleWhoQuestion(job: Job<WhoQuestion>) {
+    const { chosen, channelId } = job.data;
 
     const answerIdx = randomNum(0, whoIsQuestionAnswers.length);
     const answer = whoIsQuestionAnswers[answerIdx];
@@ -81,14 +81,12 @@ export class AppProcessor {
     if (answerIdx < 4) {
       response = answer;
     } else {
-      const members = message.guild.members.cache.filter((m) => !m.user.bot);
-      const chosenOne = getRandomArrayElement([...members]);
-      const { username, discriminator } = chosenOne[1].user;
+      const { username, discriminator, tag } = chosen;
 
-      response = `${answer} ${username}#${discriminator}`;
+      response = `${answer} ${parseInt(discriminator) > 0 ? tag : username}`;
     }
 
-    await this.appService.reply(response, channel);
+    await this.appService.reply(response, channelId);
   }
 
   @Process(MessageQueueProcessName.RandomQuestion)

@@ -123,13 +123,20 @@ export class AppService implements OnModuleInit, AsyncInitializable {
               /**
                * If the message is the `Who's on the server ...` question
                */
+              const members = await message.guild.members.fetch();
+              const theChosen = getRandomArrayElement([...members.values()]);
+
               await this.messageQueue.add(
                 MessageQueueProcessName.WhoQuestion,
                 {
-                  channel,
-                  question: content,
+                  channelId: channel.id,
+                  chosen: theChosen.user.toJSON() as User,
                 },
-                { removeOnComplete: true }
+                {
+                  removeOnComplete: true,
+                  removeOnFail: true,
+                  timeout: 5000,
+                }
               );
             } else {
               /**
